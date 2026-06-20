@@ -6,6 +6,7 @@ import JoueursView from "./components/JoueursView";
 import PartieView from "./components/PartieView";
 import ScoresView from "./components/ScoresView";
 import SettingsDialog from "./components/SettingsDialog";
+import PwaInstallDialog from "./components/PwaInstallDialog";
 import { pb } from "./lib/pocketbase";
 
 // Les fameux avatars originaux des Chouineurs maquettés !
@@ -198,6 +199,54 @@ export default function App() {
     localStorage.setItem("chouine_client_id", newId);
     return newId;
   });
+
+  // Progressive Web App (PWA) installation state management
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isStandalone, setIsStandalone] = useState<boolean>(() => {
+    return window.matchMedia("(display-mode: standalone)").matches || 
+           (window.navigator as any).standalone === true;
+  });
+  const [showInstallInstructions, setShowInstallInstructions] = useState(false);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    const handleDisplayModeChange = (e: MediaQueryListEvent) => {
+      setIsStandalone(e.matches);
+    };
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    
+    const mediaQuery = window.matchMedia("(display-mode: standalone)");
+    mediaQuery.addEventListener("change", handleDisplayModeChange);
+
+    const handleAppInstalled = () => {
+      setDeferredPrompt(null);
+      setIsStandalone(true);
+    };
+    window.addEventListener("appinstalled", handleAppInstalled);
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+      mediaQuery.removeEventListener("change", handleDisplayModeChange);
+      window.removeEventListener("appinstalled", handleAppInstalled);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === "accepted") {
+        setDeferredPrompt(null);
+      }
+    } else {
+      setShowInstallInstructions(true);
+    }
+  };
 
   // Local storage caching for multiplayer configuration
   useEffect(() => {
@@ -452,6 +501,19 @@ export default function App() {
     }
   };
 
+  const handleStartGame = () => {
+    const alreadyHasScore = players.some((p) => p.scoreActuel > 0 || (p.scoresParManche && p.scoresParManche.length > 0));
+    if (alreadyHasScore || mancheActuelle > 1 || gameStatus === "termine") {
+      if (confirm("Une partie est déjà en cours ou terminée. Voulez-vous démarrer une NOUVELLE partie ? Les scores de la partie en cours seront remis à zéro.")) {
+        handleResetGame();
+      } else {
+        handleTabChange("game");
+      }
+    } else {
+      handleResetGame();
+    }
+  };
+
   const handleResetGame = () => {
     const wiped = players.map((p) => ({
       ...p,
@@ -517,6 +579,8 @@ export default function App() {
         toggleTheme={toggleTheme}
         openSettings={() => setSettingsOpen(true)}
         multiplayerMode={multiplayerMode}
+        onInstallClick={handleInstallClick}
+        isStandalone={isStandalone}
       />
 
       {/* 2. Conteneur principal fluide */}
@@ -525,7 +589,7 @@ export default function App() {
           <JoueursView
             players={players}
             onUpdatePlayers={setPlayers}
-            onStartGame={() => handleTabChange("game")}
+            onStartGame={handleStartGame}
             isGM={isGM}
             multiplayerMode={multiplayerMode}
             onCreateOnlineRoom={handleCreateOnlineRoom}
@@ -540,6 +604,7 @@ export default function App() {
             players={players}
             mancheActuelle={mancheActuelle}
             onValiderManche={handleValiderManche}
+            onResetGame={handleResetGame}
             isGM={isGM}
             multiplayerMode={multiplayerMode}
           />
@@ -571,6 +636,13 @@ export default function App() {
         onUpdateMultiplayerMode={setMultiplayerMode}
         onResetAll={handleResetAll}
         onSimulateLobbyPlayers={handleSimulateLobbyPlayers}
+      />
+
+      <PwaInstallDialog
+        isOpen={showInstallInstructions}
+        onClose={() => setShowInstallInstructions(false)}
+        onInstall={handleInstallClick}
+        isInstallReady={!!deferredPrompt}
       />
     </div>
   );

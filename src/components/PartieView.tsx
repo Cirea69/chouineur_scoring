@@ -19,6 +19,7 @@ interface PartieViewProps {
       totalScore: number;
     }
   }) => void;
+  onResetGame?: () => void;
   isGM?: boolean;
   multiplayerMode?: string;
 }
@@ -27,6 +28,7 @@ export default function PartieView({
   players,
   mancheActuelle,
   onValiderManche,
+  onResetGame,
   isGM = true,
   multiplayerMode = "local",
 }: PartieViewProps) {
@@ -250,10 +252,26 @@ export default function PartieView({
           <span className="font-label-lg text-xs leading-none text-secondary dark:text-secondary-fixed-dim uppercase tracking-widest font-bold">
             Manche {mancheActuelle} sur 4
           </span>
-          <h2 className="font-headline-sm text-lg sm:text-xl font-black mt-1 text-on-surface">
-            Saisie de la Manche
-          </h2>
-          <p className="font-body-md text-xs mt-1 text-on-surface-variant max-w-sm">
+          <div className="flex items-center justify-center sm:justify-start gap-3 mt-1.5 flex-wrap">
+            <h2 className="font-headline-sm text-lg sm:text-xl font-black text-on-surface">
+              Saisie de la Manche
+            </h2>
+            {!isReadOnly && onResetGame && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirm("Voulez-vous vraiment recommencer la partie à zéro ? Les scores et l'avancement de la partie en cours seront perdus.")) {
+                    onResetGame();
+                  }
+                }}
+                className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase text-red-600 hover:text-red-700 bg-red-100 hover:bg-red-200 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-950/70 border border-red-500/10 px-2 py-1 rounded transition-all cursor-pointer hover:scale-[1.03] active:scale-95"
+                title="Démarrer une nouvelle partie (Conserver les joueurs)"
+              >
+                Recommencer à zéro 🔄
+              </button>
+            )}
+          </div>
+          <p className="font-body-md text-xs mt-1.5 text-on-surface-variant max-w-sm">
             Cliquez sur un joueur pour déplier ses scores. Les volets intérieurs se referment pour optimiser l'écran !
           </p>
         </div>
