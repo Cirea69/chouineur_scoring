@@ -1,0 +1,357 @@
+import { useState } from "react";
+import { Plus, Trash2, Camera, Star, Sparkles, Smile, MessageSquare, AlertCircle, Users, Play } from "lucide-react";
+import { Player } from "../types";
+import AvatarPickerModal from "./AvatarPickerModal";
+import { motion } from "motion/react";
+import { PLAYER_COLORS, getPlayerColorPreset } from "../constants";
+
+interface JoueursViewProps {
+  players: Player[];
+  onUpdatePlayers: (players: Player[]) => void;
+  onStartGame: () => void;
+}
+
+const DEFAULT_SUBTITLES = [
+  "Prêt à chouiner pour la victoire.",
+  "A toujours une carte dans sa manche.",
+  "Ne supporte pas les mauvais perdants.",
+  "Râle dès qu'il pioche une mauvaise carte.",
+  "Boude silencieusement quand il perd.",
+  "Surnommé le roi de la mauvaise foi.",
+  "Prétend que les règles changent en cours de route."
+];
+
+const PRESET_AVATARS = [
+  "https://lh3.googleusercontent.com/aida-public/AB6AXuAZNvniEMANB7oOLI39p7aqpV6uNbkuiE_MtYMHqm1KB3PNatlWSO3H8tdRY23ghZTbTsGkxi3L0gSZDHK1xqd1lS_blQ6Z_eCKjLCXD8m7aA--eJVVydz843HrHoepqeQsU_5B0YZxWKehx8yyKuBtlZ8_Tl-Juye_SkjsbOO24HxokhqFSqyqVh3zzt393qgtWH4C55C4LFVAwUNfuSBDhnDe9fKLJuLfDTGfp8HCx-Or4zC702U3VR2_I34sVLwJTUfiyFBIB0c",
+  "https://lh3.googleusercontent.com/aida-public/AB6AXuC1utXBxP-J5exPJaUjKEgRFjZbIZfVKBClrhy-f8QPtTmjNtVGpL-SsveOU-bEseJdPHRZLgpNIUZMUk0nTQvvLCcohKKCgzcEUev2cpEPfiK_TRPptVba0VJ0BCj_bxZZPGINpAwdtBEK1AptqKmnXES11w83Q59hw3uMXrht3vhMS8n9btXfitsGEV9-BdMYnM0Li--EHaRYu9_7TPnxJbCg8rhoiMxhjQgONTn7RJ3EkuvJwjkIborF9-LGcemfGO7YTZ6OTrg",
+  "https://lh3.googleusercontent.com/aida-public/AB6AXuBaJRKZ4qEJjyYEGZPqFnaIb7zUW3TN__o-cpgGc5Vrk11CMRolIcTpJ9mm-q_wNekoMy-xMMVyrpqfLc8-xqSohG758MMaTUgOAzvxs5e4s3eyolmGzRVqWdxKsdtv1YztFdWL-AdmXwmf5e-G3-Jlw-GBIEHM8bt90wgGv4h0XyOssqI_cZcsoHIQr5vMz-GrlC29BgJCQ1xO6eDlnTlMDPdROphYcg3XaxBVeVLiqmximajl2cxYjDuqTARkv68cblGVh2ASfzo"
+];
+
+export default function JoueursView({
+  players,
+  onUpdatePlayers,
+  onStartGame,
+}: JoueursViewProps) {
+  const [avatarPickerState, setAvatarPickerState] = useState<{
+    isOpen: boolean;
+    playerId: string | null;
+  }>({
+    isOpen: false,
+    playerId: null,
+  });
+
+  const handleNameChange = (id: string, newName: string) => {
+    const updated = players.map((p) =>
+      p.id === id ? { ...p, name: newName } : p
+    );
+    onUpdatePlayers(updated);
+  };
+
+  const handleSubtitleChange = (id: string, newSubtitle: string) => {
+    const updated = players.map((p) =>
+      p.id === id ? { ...p, subtitle: newSubtitle } : p
+    );
+    onUpdatePlayers(updated);
+  };
+
+  const handleAvatarChange = (id: string, newAvatar: string) => {
+    const updated = players.map((p) =>
+      p.id === id ? { ...p, avatar: newAvatar } : p
+    );
+    onUpdatePlayers(updated);
+  };
+
+  const handleColorChange = (id: string, newColor: string) => {
+    const updated = players.map((p) =>
+      p.id === id ? { ...p, color: newColor } : p
+    );
+    onUpdatePlayers(updated);
+  };
+
+  const handleAddPlayer = () => {
+    if (players.length >= 5) {
+      alert("La Chouine se joue à 5 joueurs maximum !");
+      return;
+    }
+    const defaultAvatars = PRESET_AVATARS;
+    const randomAvatar = defaultAvatars[Math.floor(Math.random() * defaultAvatars.length)];
+    const randomSub = DEFAULT_SUBTITLES[Math.floor(Math.random() * DEFAULT_SUBTITLES.length)];
+    const nextNum = players.length + 1;
+    
+    // Trouver une couleur non encore utilisée
+    const takenColors = players.map((p, pIdx) => p.color || getPlayerColorPreset(undefined, pIdx).id);
+    const availableColorPreset = PLAYER_COLORS.find(c => !takenColors.includes(c.id));
+    const defaultColor = availableColorPreset ? availableColorPreset.id : PLAYER_COLORS[players.length % PLAYER_COLORS.length].id;
+
+    const newPlayer: Player = {
+      id: Math.random().toString(36).substr(2, 9),
+      name: `Joueur ${nextNum}`,
+      subtitle: randomSub,
+      avatar: randomAvatar,
+      scoreActuel: 0,
+      scoresParManche: [],
+      chouinages: 0,
+      chouinagesParManche: [],
+      plisParManche: [],
+      parisParManche: [],
+      parissValides: [],
+      color: defaultColor
+    };
+    onSelectAvatar(newPlayer);
+  };
+
+  const onSelectAvatarDataUrl = (avatarUrl: string) => {
+    if (activePlayerIdForAvatar) {
+      handleAvatarChange(activePlayerIdForAvatar, avatarUrl);
+    }
+  };
+
+  const onSelectAvatar = (newPlayer: Player) => {
+    onUpdatePlayers([...players, newPlayer]);
+  };
+
+  const handleRemovePlayer = (id: string) => {
+    if (players.length <= 3) {
+      alert("La Chouine se joue à 3 joueurs minimum !");
+      return;
+    }
+    const filtered = players.filter((p) => p.id !== id);
+    // Renommer les numéros par défaut éventuellement
+    const updated = filtered.map((p, index) => {
+      if (p.name.startsWith("Joueur ")) {
+        return { ...p, name: `Joueur ${index + 1}` };
+      }
+      return p;
+    });
+    onUpdatePlayers(updated);
+  };
+
+  const activePlayerIdForAvatar = avatarPickerState.playerId;
+  const activeCurrentAvatar = players.find((p) => p.id === activePlayerIdForAvatar)?.avatar || "";
+
+  return (
+    <div className="w-full max-w-xl mx-auto pb-32">
+      {/* Visual background illustrations overlays */}
+      <span className="material-symbols-outlined absolute top-4 -left-4 text-tertiary/10 dark:text-primary-fixed-dim/5 -rotate-12 scale-150 select-none pointer-events-none">
+        mood
+      </span>
+      <span className="material-symbols-outlined absolute top-20 -right-2 text-primary/10 dark:text-secondary-fixed-dim/5 rotate-12 scale-125 select-none pointer-events-none">
+        face_6
+      </span>
+
+      {/* Segment Header */}
+      <div className="text-center mb-6">
+        <h2 className="font-headline-md text-headline-sm sm:text-headline-md text-primary dark:text-primary-fixed-dim flex items-center justify-center gap-2">
+          <Users className="w-6 h-6 text-secondary" />
+          Les Joueurs
+        </h2>
+        <div className="decorative-divider"></div>
+      </div>
+
+      {/* List of Player Cards */}
+      <div className="flex flex-col gap-6 px-1">
+        {players.map((player, index) => {
+          // Déterminer la rotation du rendu
+          const rotationClass =
+            index % 3 === 0
+              ? "-rotate-1"
+              : index % 3 === 1
+              ? "rotate-1"
+              : "-rotate-0.5";
+
+          const colorPreset = getPlayerColorPreset(player.color, index);
+
+          return (
+            <motion.div
+              key={player.id}
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.08 }}
+              className={`bg-surface-container-low dark:bg-surface-container-high/40 p-6 sketchy-border shadow-md hover:rotate-0 hover:scale-[1.01] transition-all relative ${rotationClass}`}
+            >
+              <div className="corner-flourish flourish-tl"></div>
+
+              <div className="flex flex-col sm:flex-row items-center gap-6">
+                {/* Avatar with dynamic Camera trigger override */}
+                <div className="relative group">
+                  <div
+                    className={`w-24 h-24 rounded-full border-4 ${colorPreset.borderClass} overflow-hidden bg-surface-bright dark:bg-surface-dim shadow-inner relative flex items-center justify-center`}
+                  >
+                    <img
+                      src={player.avatar}
+                      alt={player.name}
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  {/* Camera overlay button */}
+                  <button
+                    onClick={() =>
+                      setAvatarPickerState({ isOpen: true, playerId: player.id })
+                    }
+                    className="absolute -bottom-1 -right-1 bg-secondary hover:bg-secondary-container text-on-secondary p-2.5 rounded-full shadow-md hover:scale-110 active:scale-95 transition-all flex items-center justify-center border-2 border-on-background dark:border-surface-variant cursor-pointer"
+                    title="Prendre / Changer d'avatar"
+                  >
+                    <Camera className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Input Details */}
+                <div className="flex-1 w-full">
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="font-label-lg text-tertiary dark:text-primary-fixed-dim text-xs uppercase tracking-wider flex items-center gap-1 font-bold">
+                      <Star className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />
+                      Chouineur n°{index + 1}
+                    </label>
+
+                    {/* Button trash to delete a player */}
+                    {players.length > 3 && (
+                      <button
+                        onClick={() => handleRemovePlayer(player.id)}
+                        className="p-1.5 text-on-surface-variant hover:text-error transition-colors rounded-full hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer"
+                        title="Supprimer ce joueur"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Input Name field */}
+                  <input
+                    type="text"
+                    value={player.name}
+                    onChange={(e) => handleNameChange(player.id, e.target.value)}
+                    className="w-full bg-transparent border-b-2 border-outline-variant/60 focus:border-primary focus:ring-0 text-headline-sm dark:text-on-surface font-headline-sm px-0 py-1 transition-colors italic focus:outline-none"
+                    placeholder="Nom du chouineur..."
+                  />
+
+                  {/* Subtitle Input and description icon row */}
+                  <div className="flex items-center gap-1.5 mt-2 text-on-surface-variant dark:text-on-surface-variant/80">
+                    <MessageSquare className="w-3.5 h-3.5 shrink-0 opacity-70" />
+                    <input
+                      type="text"
+                      value={player.subtitle}
+                      onChange={(e) =>
+                        handleSubtitleChange(player.id, e.target.value)
+                      }
+                      className="w-full bg-transparent bg-none italic border-none p-0 text-xs focus:ring-0 text-on-surface-variant/90 dark:text-on-surface-variant focus:outline-none"
+                      placeholder="Devise ou caricature de chouineur..."
+                    />
+                  </div>
+
+                  {/* Player Color Picker Select Row */}
+                  <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-dashed border-outline-variant/30 pt-3">
+                    <span className="text-xs font-bold text-on-surface-variant/80 dark:text-on-surface-variant/70 uppercase tracking-widest flex items-center gap-1.5 shrink-0">
+                      <span className="inline-block w-2.5 h-2.5 rounded-full transition-colors duration-300" style={{ backgroundColor: colorPreset.hex }}></span>
+                      Couleur :
+                    </span>
+                    <div className="flex items-center gap-2">
+                      {PLAYER_COLORS.map((col) => {
+                        const isSelected = player.color === col.id || (!player.color && getPlayerColorPreset(undefined, index).id === col.id);
+                        const otherPlayerWhoTookIt = players.find((p, pIdx) => p.id !== player.id && (p.color || getPlayerColorPreset(undefined, pIdx).id) === col.id);
+                        const isTakenByOther = !!otherPlayerWhoTookIt;
+
+                        return (
+                          <button
+                            key={col.id}
+                            type="button"
+                            disabled={isTakenByOther}
+                            onClick={() => !isTakenByOther && handleColorChange(player.id, col.id)}
+                            className={`w-7 h-7 rounded-full transition-all duration-200 relative flex items-center justify-center border-2 ${
+                              isSelected 
+                                ? "border-on-surface scale-110 shadow-md ring-2 ring-primary/45" 
+                                : isTakenByOther
+                                ? "border-transparent opacity-25 cursor-not-allowed saturate-30"
+                                : "border-outline-variant hover:border-on-surface hover:scale-115 cursor-pointer"
+                            } ${col.bgClass}`}
+                            title={isTakenByOther ? `${col.name} (Pris par ${otherPlayerWhoTookIt.name})` : col.name}
+                          >
+                            {isSelected && (
+                              <svg className="w-3.5 h-3.5 text-white stroke-[3] drop-shadow-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                            {isTakenByOther && (
+                              <svg className="w-4 h-4 text-white/80 stroke-[2] absolute inset-0 m-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <line x1="18" y1="6" x2="6" y2="18" />
+                              </svg>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          );
+        })}
+
+        {/* Dynamic add Chouineur button */}
+        <button
+          onClick={handleAddPlayer}
+          disabled={players.length >= 5}
+          className={`group flex items-center justify-center gap-2 p-5 border-4 border-dashed rounded-xl transition-all duration-300 relative ${
+            players.length >= 5
+              ? "border-outline-variant/40 text-on-surface-variant/40 bg-black/5 dark:bg-white/5 cursor-not-allowed select-none"
+              : "border-outline-variant/80 dark:border-outline-variant/40 text-on-surface-variant dark:text-on-surface-variant/80 hover:border-primary hover:text-primary dark:hover:border-primary-fixed-dim dark:hover:text-primary-fixed-dim hover:bg-primary/5 hover:translate-y-[-2px] cursor-pointer"
+          }`}
+        >
+          <Plus className={`w-6 h-6 ${players.length >= 5 ? "" : "group-hover:rotate-180 transition-transform duration-500"}`} />
+          <span className="font-headline-sm uppercase tracking-wider text-base sm:text-lg">
+            {players.length >= 5 ? "Nouveau Chouineur (Max. 5 atteint)" : "Nouveau Chouineur"}
+          </span>
+        </button>
+      </div>
+
+      {/* Warning Callout Box */}
+      <div className="mt-8 mx-1 p-6 bg-tertiary-fixed-dim text-on-tertiary-fixed border-on-background dark:border-primary-fixed-dim/20 border-2 rotate-1 shadow-[6px_6px_0px_rgba(105,76,0,0.25)] rounded-lg relative overflow-hidden transition-colors">
+        <div className="absolute -right-4 -top-4 opacity-10 rotate-12 pointer-events-none">
+          <Smile className="w-20 h-20 text-tertiary" />
+        </div>
+        <div className="flex gap-4 relative z-10">
+          <AlertCircle className="w-6 h-6 text-tertiary shrink-0" />
+          <p className="font-body-md leading-tight italic font-bold">
+            Rappel : La chouine est autorisée, mais la mauvaise foi est obligatoire pour gagner !
+          </p>
+        </div>
+      </div>
+
+      {/* Primary Lancer la Partie CTA Trigger */}
+      <div className="mt-8 px-1 pb-4">
+        <button
+          onClick={onStartGame}
+          className={`w-full py-4 px-6 rounded-xl font-headline-sm text-base sm:text-lg uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-3 shadow-lg relative border-2 ${
+            players.length < 3 || players.length > 5
+              ? "bg-stone-100 dark:bg-stone-800/40 text-stone-400 dark:text-stone-500 border-dashed border-stone-300 dark:border-stone-700 cursor-not-allowed select-none"
+              : "bg-primary text-on-primary hover:bg-primary-hover border-transparent hover:translate-y-[-2px] active:translate-y-[0px] cursor-pointer"
+          }`}
+        >
+          <Play className={`w-5 h-5 shrink-0 ${players.length >= 3 && players.length <= 5 ? "animate-pulse" : ""}`} />
+          <span>Commencer la Partie ({players.length} Chouineurs)</span>
+        </button>
+
+        {players.length < 3 && (
+          <div className="flex items-center justify-center gap-1.5 mt-2.5 text-red-600 dark:text-red-400 font-semibold text-xs text-center">
+            <span className="inline-block animate-bounce">⚠️</span>
+            <span>Un minimum de 3 Chouineurs est requis pour jouer. Ajoutez d'autres joueurs !</span>
+          </div>
+        )}
+        {players.length > 5 && (
+          <div className="flex items-center justify-center gap-1.5 mt-2.5 text-red-600 dark:text-red-400 font-semibold text-xs text-center">
+            <span className="inline-block animate-bounce">⚠️</span>
+            <span>Un maximum de 5 Chouineurs est autorisé pour jouer. Retirez des joueurs !</span>
+          </div>
+        )}
+      </div>
+
+      {/* Avatar Changer modal container */}
+      <AvatarPickerModal
+        isOpen={avatarPickerState.isOpen}
+        onClose={() => setAvatarPickerState({ isOpen: false, playerId: null })}
+        onSelectAvatar={onSelectAvatarDataUrl}
+        currentAvatar={activeCurrentAvatar}
+      />
+    </div>
+  );
+}
