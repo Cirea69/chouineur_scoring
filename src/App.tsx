@@ -6,6 +6,7 @@ import JoueursView from "./components/JoueursView";
 import PartieView from "./components/PartieView";
 import ScoresView from "./components/ScoresView";
 import SettingsDialog from "./components/SettingsDialog";
+import { pb } from "./lib/pocketbase";
 
 // Les fameux avatars originaux des Chouineurs maquettés !
 const DEFAULT_PLAYERS: Player[] = [
@@ -176,7 +177,167 @@ export default function App() {
   };
 
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [multiplayerMode, setMultiplayerMode] = useState<"local" | "simulated">("local");
+  const [multiplayerMode, setMultiplayerMode] = useState<"local" | "simulated" | "multiplayer">(() => {
+    const cached = localStorage.getItem("chouine_multiplayer_mode");
+    return (cached as "local" | "simulated" | "multiplayer") || "local";
+  });
+
+  const [isGM, setIsGM] = useState<boolean>(() => {
+    const cached = localStorage.getItem("chouine_is_gm");
+    return cached === null ? true : cached === "true";
+  });
+
+  const [roomCode, setRoomCode] = useState<string | null>(() => {
+    return localStorage.getItem("chouine_room_code") || null;
+  });
+
+  const [clientId] = useState<string>(() => {
+    const cached = localStorage.getItem("chouine_client_id");
+    if (cached) return cached;
+    const newId = "client-" + Math.random().toString(36).substring(2, 9);
+    localStorage.setItem("chouine_client_id", newId);
+    return newId;
+  });
+
+  // Local storage caching for multiplayer configuration
+  useEffect(() => {
+    localStorage.setItem("chouine_multiplayer_mode", multiplayerMode);
+  }, [multiplayerMode]);
+
+  useEffect(() => {
+    localStorage.setItem("chouine_is_gm", isGM ? "true" : "false");
+  }, [isGM]);
+
+  useEffect(() => {
+    if (roomCode) {
+      localStorage.setItem("chouine_room_code", roomCode);
+    } else {
+      localStorage.removeItem("chouine_room_code");
+    }
+  }, [roomCode]);
+
+  // Host a room
+  const handleCreateOnlineRoom = async () => {
+    const code = Math.random().toString(36).substring(2, 6).toUpperCase(); // e.g. "XRTZ"
+    try {
+      await pb.createRoom(code, {
+        players,
+        mancheActuelle,
+        gameStatus,
+        currentTab,
+        hostId: clientId,
+      });
+      setIsGM(true);
+      setRoomCode(code);
+      setMultiplayerMode("multiplayer");
+      alert(`Salon ${code} hébergé avec succès ! Partagez ce code avec vos amis.`);
+    } catch (err: any) {
+      alert("Échec de la création du salon en ligne : " + err.message);
+    }
+  };
+
+  // Join an existing room
+  const handleJoinOnlineRoom = async (code: string, playerName: string) => {
+    const cleanCode = code.trim().toUpperCase();
+    if (!cleanCode) {
+      alert("Veuillez saisir un code à 4 lettres.");
+      return;
+    }
+    if (!playerName.trim()) {
+      alert("Veuillez saisir un nom ou pseudo.");
+      return;
+    }
+
+    try {
+      // Create new player state for Joining client
+      const joiner: Player = {
+        id: clientId,
+        name: playerName,
+        subtitle: "Joueur Distant connecté.",
+        avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuCpOSNS863E9dVIAc_SuQxjIr1kZBqheibyx5k67M5IvxaXzQx7nEFI0bTXUx5XuBXbyBb31l_xqE5-J7NUeC3oJjNpIthXuKlqvCpCgdFG4Ev2FnjFDGHAjXPHp1Yv_sds1UfUJQvONHK9UDKalagzE2Zvt2dcTerGh7YC58q6YHydxaXvxHUsXYW_CM8X7_6L7yF3kzGXfgxeNOWSVbbfO_8aYyVpNIHRebjiZr9jfBgxW8moSvM9SIW4lKPcCyxsBzu_xmoZB2Q",
+        scoreActuel: 0,
+        scoresParManche: [],
+        chouinages: 0,
+        chouinagesParManche: [],
+        chouinesPointsParManche: [],
+        plisParManche: [],
+        parisParManche: [],
+        parissValides: [],
+        color: "purple"
+      };
+
+      const serverState = await pb.joinRoom(cleanCode, joiner);
+      setIsGM(false);
+      setRoomCode(cleanCode);
+      setMultiplayerMode("multiplayer");
+      
+      // Seed initial local status
+      setPlayers(serverState.players);
+      setMancheActuelle(serverState.mancheActuelle);
+      setGameStatus(serverState.gameStatus);
+      setCurrentTab(serverState.currentTab);
+      
+      alert(`Vous avez rejoint le salon ${cleanCode} avec succès !`);
+    } catch (err: any) {
+      alert(err.message || "Impossible de rejoindre le salon.");
+    }
+  };
+
+  const handleDisconnectRoom = () => {
+    setMultiplayerMode("local");
+    setRoomCode(null);
+    setIsGM(true);
+    setPlayers(DEFAULT_PLAYERS);
+    setMancheActuelle(1);
+    setGameStatus("saisie");
+    setCurrentTab("players");
+    alert("Déconnecté du salon multijoueur. Roster local restauré.");
+  };
+
+  // Effet GM (Écriture de l'état global du jeu dans un document pocketbase)
+  useEffect(() => {
+    if (multiplayerMode === "multiplayer" && isGM && roomCode) {
+      const delayDebounce = setTimeout(async () => {
+        try {
+          await pb.saveRoomState(roomCode, {
+            players,
+            mancheActuelle,
+            gameStatus,
+            currentTab,
+            hostId: clientId,
+          });
+        } catch (err) {
+          console.error("Échec de la synchronisation GM vers le serveur:", err);
+        }
+      }, 1200);
+
+      return () => clearTimeout(delayDebounce);
+    }
+  }, [multiplayerMode, isGM, roomCode, players, mancheActuelle, gameStatus, currentTab, clientId]);
+
+  // Effet Player (Lecture & Abonnement temps réel)
+  useEffect(() => {
+    if (multiplayerMode === "multiplayer" && !isGM && roomCode) {
+      const unsubscribe = pb.onSnapshot(roomCode, (serverState) => {
+        if (serverState.players) {
+          setPlayers(serverState.players);
+        }
+        if (serverState.mancheActuelle) {
+          setMancheActuelle(serverState.mancheActuelle);
+        }
+        if (serverState.gameStatus) {
+          setGameStatus(serverState.gameStatus);
+        }
+        if (serverState.currentTab !== undefined) {
+          setCurrentTab(serverState.currentTab);
+        }
+      });
+
+      return () => {
+        unsubscribe();
+      };
+    }
+  }, [multiplayerMode, isGM, roomCode]);
 
   // Synchroniser le thème avec la balise racine HTML et le body
   useEffect(() => {
@@ -365,6 +526,12 @@ export default function App() {
             players={players}
             onUpdatePlayers={setPlayers}
             onStartGame={() => handleTabChange("game")}
+            isGM={isGM}
+            multiplayerMode={multiplayerMode}
+            onCreateOnlineRoom={handleCreateOnlineRoom}
+            onJoinOnlineRoom={handleJoinOnlineRoom}
+            onDisconnectRoom={handleDisconnectRoom}
+            roomCode={roomCode}
           />
         )}
 
@@ -373,6 +540,8 @@ export default function App() {
             players={players}
             mancheActuelle={mancheActuelle}
             onValiderManche={handleValiderManche}
+            isGM={isGM}
+            multiplayerMode={multiplayerMode}
           />
         )}
 

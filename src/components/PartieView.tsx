@@ -19,13 +19,19 @@ interface PartieViewProps {
       totalScore: number;
     }
   }) => void;
+  isGM?: boolean;
+  multiplayerMode?: string;
 }
 
 export default function PartieView({
   players,
   mancheActuelle,
   onValiderManche,
+  isGM = true,
+  multiplayerMode = "local",
 }: PartieViewProps) {
+  const isReadOnly = multiplayerMode === "multiplayer" && !isGM;
+
   const getFirstAvailableCard = (player: Player) => {
     const valides = player.parissValides || [];
     const available = PARI_CARDS.filter((c) => !valides.includes(c.id));
@@ -114,6 +120,7 @@ export default function PartieView({
   };
 
   const handlePariChange = (playerId: string, cardId: string) => {
+    if (isReadOnly) return;
     setSelectedPari((prev) => ({
       ...prev,
       [playerId]: cardId,
@@ -121,6 +128,7 @@ export default function PartieView({
   };
 
   const handlePlisSelect = (playerId: string, val: number) => {
+    if (isReadOnly) return;
     setPlisCount((prev) => ({
       ...prev,
       [playerId]: val,
@@ -128,6 +136,7 @@ export default function PartieView({
   };
 
   const handleIncrementFlipping = (playerId: string) => {
+    if (isReadOnly) return;
     setActiveFlippingChouines((prev) => ({
       ...prev,
       [playerId]: (prev[playerId] || 0) + 1,
@@ -135,6 +144,7 @@ export default function PartieView({
   };
 
   const handleDecrementFlipping = (playerId: string) => {
+    if (isReadOnly) return;
     setActiveFlippingChouines((prev) => ({
       ...prev,
       [playerId]: Math.max(0, (prev[playerId] || 0) - 1),
@@ -142,6 +152,7 @@ export default function PartieView({
   };
 
   const handleIncrementPoints = (playerId: string) => {
+    if (isReadOnly) return;
     setActivePointsChouines((prev) => ({
       ...prev,
       [playerId]: (prev[playerId] || 0) + 1,
@@ -149,6 +160,7 @@ export default function PartieView({
   };
 
   const handleDecrementPoints = (playerId: string) => {
+    if (isReadOnly) return;
     setActivePointsChouines((prev) => ({
       ...prev,
       [playerId]: Math.max(0, (prev[playerId] || 0) - 1),
@@ -429,17 +441,21 @@ export default function PartieView({
                                         <div className="mt-2 text-center">
                                           <button
                                             type="button"
-                                            disabled={isDiscarded}
+                                            disabled={isDiscarded || isReadOnly}
                                             onClick={() => handlePariChange(player.id, card.id)}
-                                            className={`px-2.5 py-1 text-[10px] font-black rounded-lg transition-colors cursor-pointer ${
+                                            className={`px-2.5 py-1 text-[10px] font-black rounded-lg transition-colors ${
                                               isDiscarded
                                                 ? "bg-stone-100 text-stone-400 cursor-not-allowed"
+                                                : isReadOnly
+                                                ? isSelected
+                                                  ? "bg-primary/40 text-on-primary select-none cursor-default opacity-60"
+                                                  : "bg-surface-container-high/30 text-on-surface/40 select-none cursor-default"
                                                 : isSelected
-                                                ? "bg-primary text-on-primary shadow"
-                                                : "bg-surface-container-high text-on-surface hover:bg-surface-container-highest"
+                                                ? "bg-primary text-on-primary shadow cursor-pointer"
+                                                : "bg-surface-container-high text-on-surface hover:bg-surface-container-highest cursor-pointer"
                                             }`}
                                           >
-                                            {isSelected ? "Active" : isDiscarded ? "Écartée" : "Choisir"}
+                                            {isSelected ? "Active" : isDiscarded ? "Écartée" : isReadOnly ? "Verrouillé" : "Choisir"}
                                           </button>
                                         </div>
                                       </div>
@@ -507,6 +523,7 @@ export default function PartieView({
                                       <button
                                         type="button"
                                         key={num}
+                                        disabled={isReadOnly}
                                         onClick={() => handlePlisSelect(player.id, num)}
                                         className={`w-9 h-9 sm:w-11 sm:h-11 rounded-full font-headline-sm text-sm sm:text-base flex items-center justify-center transition-all cursor-pointer select-none active:scale-90 border-2 ${
                                           isSelected
@@ -594,11 +611,13 @@ export default function PartieView({
                                     <button
                                       type="button"
                                       onClick={() => handleDecrementFlipping(player.id)}
-                                      disabled={currentFlipping === 0}
-                                      className={`px-2.5 py-1.5 transition-all cursor-pointer border-r border-outline-variant flex items-center justify-center ${
-                                        currentFlipping === 0
+                                      disabled={currentFlipping === 0 || isReadOnly}
+                                      className={`px-2.5 py-1.5 transition-all border-r border-outline-variant flex items-center justify-center ${
+                                        isReadOnly
+                                          ? "opacity-25 cursor-default text-stone-400"
+                                          : currentFlipping === 0
                                           ? "opacity-25 cursor-not-allowed text-stone-400"
-                                          : "text-red-500 hover:bg-red-500/10 active:scale-90"
+                                          : "text-red-500 hover:bg-red-500/10 active:scale-90 cursor-pointer"
                                       }`}
                                     >
                                       <Minus className="w-3.5 h-3.5 font-black" />
@@ -616,7 +635,12 @@ export default function PartieView({
                                     <button
                                       type="button"
                                       onClick={() => handleIncrementFlipping(player.id)}
-                                      className="px-2.5 py-1.5 transition-all text-green-500 hover:bg-green-500/10 active:scale-90 cursor-pointer border-l border-outline-variant flex items-center justify-center"
+                                      disabled={isReadOnly}
+                                      className={`px-2.5 py-1.5 transition-all text-green-500 border-l border-outline-variant flex items-center justify-center ${
+                                        isReadOnly
+                                          ? "opacity-25 cursor-default"
+                                          : "hover:bg-green-500/10 active:scale-90 cursor-pointer"
+                                      }`}
                                     >
                                       <Plus className="w-3.5 h-3.5 font-black" />
                                     </button>
@@ -639,11 +663,13 @@ export default function PartieView({
                                     <button
                                       type="button"
                                       onClick={() => handleDecrementPoints(player.id)}
-                                      disabled={currentPoints === 0}
-                                      className={`px-2.5 py-1.5 transition-all cursor-pointer border-r border-outline-variant flex items-center justify-center ${
-                                        currentPoints === 0
+                                      disabled={currentPoints === 0 || isReadOnly}
+                                      className={`px-2.5 py-1.5 transition-all border-r border-outline-variant flex items-center justify-center ${
+                                        isReadOnly
+                                          ? "opacity-25 cursor-default text-stone-400"
+                                          : currentPoints === 0
                                           ? "opacity-25 cursor-not-allowed text-stone-400"
-                                          : "text-red-500 hover:bg-red-500/10 active:scale-90"
+                                          : "text-red-500 hover:bg-red-500/10 active:scale-90 cursor-pointer"
                                       }`}
                                     >
                                       <Minus className="w-3.5 h-3.5 font-black" />
@@ -661,7 +687,12 @@ export default function PartieView({
                                     <button
                                       type="button"
                                       onClick={() => handleIncrementPoints(player.id)}
-                                      className="px-2.5 py-1.5 transition-all text-green-500 hover:bg-green-500/10 active:scale-90 cursor-pointer border-l border-outline-variant flex items-center justify-center"
+                                      disabled={isReadOnly}
+                                      className={`px-2.5 py-1.5 transition-all text-green-500 border-l border-outline-variant flex items-center justify-center ${
+                                        isReadOnly
+                                          ? "opacity-25 cursor-default"
+                                          : "hover:bg-green-500/10 active:scale-90 cursor-pointer"
+                                      }`}
                                     >
                                       <Plus className="w-3.5 h-3.5 font-black" />
                                     </button>
@@ -683,15 +714,27 @@ export default function PartieView({
         })}
       </div>
 
-      {/* Validate Button */}
+      {/* Validate Button or Spectator Wait banner */}
       <div className="mt-8 mb-6 text-center">
-        <button
-          onClick={handleSubmit}
-          className="group relative w-full inline-flex items-center justify-center px-12 py-5 font-headline-sm text-headline-sm bg-primary text-on-primary dark:bg-primary-container dark:text-on-primary-container hand-drawn-border rounded-xl transition-all hover:scale-[1.02] active:scale-95 hover:-rotate-1 cursor-pointer shadow-lg"
-        >
-          VALIDER LA MANCHE
-          <CheckCircle className="ml-2.5 w-6 h-6 group-hover:translate-x-1 transition-transform shrink-0" />
-        </button>
+        {isReadOnly ? (
+          <div className="hand-drawn-border border-primary bg-primary/5 p-6 rounded-xl flex flex-col items-center justify-center text-center gap-3">
+            <span className="w-10 h-10 border-4 border-primary border-t-transparent animate-spin rounded-full"></span>
+            <div className="text-sm">
+              <p className="font-sans font-black text-primary dark:text-primary-fixed-dim uppercase tracking-wider">Mode Spectateur Actif 👑</p>
+              <p className="text-xs text-on-surface-variant italic mt-1 max-w-sm">
+                En attente que le Maître du Jeu saisisse et valide les scores de la Manche {mancheActuelle}...
+              </p>
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={handleSubmit}
+            className="group relative w-full inline-flex items-center justify-center px-12 py-5 font-headline-sm text-headline-sm bg-primary text-on-primary dark:bg-primary-container dark:text-on-primary-container hand-drawn-border rounded-xl transition-all hover:scale-[1.02] active:scale-95 hover:-rotate-1 cursor-pointer shadow-lg"
+          >
+            VALIDER LA MANCHE
+            <CheckCircle className="ml-2.5 w-6 h-6 group-hover:translate-x-1 transition-transform shrink-0" />
+          </button>
+        )}
       </div>
 
       {/* Info Reminder Box */}

@@ -9,6 +9,12 @@ interface JoueursViewProps {
   players: Player[];
   onUpdatePlayers: (players: Player[]) => void;
   onStartGame: () => void;
+  isGM?: boolean;
+  multiplayerMode?: string;
+  onCreateOnlineRoom?: () => void;
+  onJoinOnlineRoom?: (code: string, name: string) => void;
+  onDisconnectRoom?: () => void;
+  roomCode?: string | null;
 }
 
 const DEFAULT_SUBTITLES = [
@@ -31,7 +37,18 @@ export default function JoueursView({
   players,
   onUpdatePlayers,
   onStartGame,
+  isGM = true,
+  multiplayerMode = "local",
+  onCreateOnlineRoom,
+  onJoinOnlineRoom,
+  onDisconnectRoom,
+  roomCode = null,
 }: JoueursViewProps) {
+  const isReadOnly = multiplayerMode === "multiplayer" && !isGM;
+  const [joinCode, setJoinCode] = useState("");
+  const [joinName, setJoinName] = useState("");
+  const [showJoinForm, setShowJoinForm] = useState(false);
+  
   const [avatarPickerState, setAvatarPickerState] = useState<{
     isOpen: boolean;
     playerId: string | null;
@@ -131,6 +148,111 @@ export default function JoueursView({
 
   return (
     <div className="w-full max-w-xl mx-auto pb-32">
+      {/* 🌐 PANNEAU MULTIJOUEUR EN TEMPS RÉEL (POCKETBASE) */}
+      <div className="mb-8 hand-drawn-border bg-surface-container-low dark:bg-stone-900/20 p-5 rounded-2xl shadow relative z-30">
+        <h3 className="font-headline-sm text-xs sm:text-sm text-primary dark:text-primary-fixed-dim uppercase tracking-wider font-extrabold flex items-center gap-2 mb-3">
+          <Users className="w-4 h-4 text-secondary" />
+          Salon Multijoueur en temps réel
+        </h3>
+
+        {multiplayerMode === "multiplayer" ? (
+          <div className="space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-primary/5 p-3 rounded-lg border border-primary/25">
+              <div>
+                <span className="text-[10px] text-on-surface-variant font-bold uppercase block">Salon Actif</span>
+                <span className="font-mono text-lg font-black text-primary tracking-widest">{roomCode}</span>
+              </div>
+              <div className="text-left sm:text-right">
+                <span className="text-[10px] text-on-surface-variant font-bold uppercase block">Votre Rôle</span>
+                <span className="text-xs font-black text-secondary dark:text-secondary-fixed-dim uppercase">
+                  {isGM ? "👑 Maître du Jeu (GM)" : "👁️ Joueur (Spectateur)"}
+                </span>
+              </div>
+            </div>
+
+            <button
+              onClick={onDisconnectRoom}
+              className="w-full py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold font-sans rounded-lg transition-all border-b-2 border-black cursor-pointer"
+            >
+              Déconnexion du Salon
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <p className="text-[11px] text-on-surface-variant font-medium leading-relaxed">
+              Jouez sur plusieurs appareils synchronisés en temps réel ! Un joueur héberge la partie (GM), et les autres rejoignent avec son code à 4 lettres.
+            </p>
+
+            {!showJoinForm ? (
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={onCreateOnlineRoom}
+                  className="py-2.5 px-4 bg-primary text-on-primary hover:opacity-95 font-sans font-bold text-xs rounded-lg transition-all border-b-2 border-black flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  Créer un Salon
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowJoinForm(true)}
+                  className="py-2.5 px-4 bg-surface-container-high text-on-surface hover:bg-surface-container-highest font-sans font-bold text-xs rounded-lg transition-all border-b-2 border-outline flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <Users className="w-4 h-4" />
+                  Rejoindre un Salon
+                </button>
+              </div>
+            ) : (
+              <div
+                className="space-y-3 bg-surface-bright dark:bg-stone-900/10 p-3 rounded-lg border border-outline-variant"
+              >
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[9px] font-bold text-on-surface-variant block uppercase mb-1">Code du Salon</label>
+                    <input
+                      type="text"
+                      maxLength={4}
+                      value={joinCode}
+                      onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                      placeholder="XRTZ"
+                      className="w-full bg-surface-container-low border border-outline rounded p-2 text-center font-mono font-black uppercase tracking-widest text-sm focus:outline-none focus:border-primary text-on-surface"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-bold text-on-surface-variant block uppercase mb-1">Votre Nom / Pseudo</label>
+                    <input
+                      type="text"
+                      maxLength={14}
+                      value={joinName}
+                      onChange={(e) => setJoinName(e.target.value)}
+                      placeholder="Gaston"
+                      className="w-full bg-surface-container-low border border-outline rounded p-2 text-sm focus:outline-none focus:border-primary text-on-surface font-semibold"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3.5 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowJoinForm(false)}
+                    className="py-2 text-xs font-bold rounded bg-surface-container text-on-surface hover:bg-surface-container-high cursor-pointer"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onJoinOnlineRoom && onJoinOnlineRoom(joinCode, joinName)}
+                    className="py-2 text-xs font-bold rounded bg-primary text-on-primary hover:opacity-95 cursor-pointer"
+                  >
+                    Confirmer & Rejoindre
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Visual background illustrations overlays */}
       <span className="material-symbols-outlined absolute top-4 -left-4 text-tertiary/10 dark:text-primary-fixed-dim/5 -rotate-12 scale-150 select-none pointer-events-none">
         mood
@@ -185,15 +307,17 @@ export default function JoueursView({
                     />
                   </div>
                   {/* Camera overlay button */}
-                  <button
-                    onClick={() =>
-                      setAvatarPickerState({ isOpen: true, playerId: player.id })
-                    }
-                    className="absolute -bottom-1 -right-1 bg-secondary hover:bg-secondary-container text-on-secondary p-2.5 rounded-full shadow-md hover:scale-110 active:scale-95 transition-all flex items-center justify-center border-2 border-on-background dark:border-surface-variant cursor-pointer"
-                    title="Prendre / Changer d'avatar"
-                  >
-                    <Camera className="w-4 h-4" />
-                  </button>
+                  {!isReadOnly && (
+                    <button
+                      onClick={() =>
+                        setAvatarPickerState({ isOpen: true, playerId: player.id })
+                      }
+                      className="absolute -bottom-1 -right-1 bg-secondary hover:bg-secondary-container text-on-secondary p-2.5 rounded-full shadow-md hover:scale-110 active:scale-95 transition-all flex items-center justify-center border-2 border-on-background dark:border-surface-variant cursor-pointer"
+                      title="Prendre / Changer d'avatar"
+                    >
+                      <Camera className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
 
                 {/* Input Details */}
@@ -205,7 +329,7 @@ export default function JoueursView({
                     </label>
 
                     {/* Button trash to delete a player */}
-                    {players.length > 3 && (
+                    {players.length > 3 && !isReadOnly && (
                       <button
                         onClick={() => handleRemovePlayer(player.id)}
                         className="p-1.5 text-on-surface-variant hover:text-error transition-colors rounded-full hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer"
@@ -221,7 +345,8 @@ export default function JoueursView({
                     type="text"
                     value={player.name}
                     onChange={(e) => handleNameChange(player.id, e.target.value)}
-                    className="w-full bg-transparent border-b-2 border-outline-variant/60 focus:border-primary focus:ring-0 text-headline-sm dark:text-on-surface font-headline-sm px-0 py-1 transition-colors italic focus:outline-none"
+                    disabled={isReadOnly}
+                    className="w-full bg-transparent border-b-2 border-outline-variant/60 focus:border-primary focus:ring-0 text-headline-sm dark:text-on-surface font-headline-sm px-0 py-1 transition-colors italic focus:outline-none disabled:opacity-85 disabled:cursor-default"
                     placeholder="Nom du chouineur..."
                   />
 
@@ -234,7 +359,8 @@ export default function JoueursView({
                       onChange={(e) =>
                         handleSubtitleChange(player.id, e.target.value)
                       }
-                      className="w-full bg-transparent bg-none italic border-none p-0 text-xs focus:ring-0 text-on-surface-variant/90 dark:text-on-surface-variant focus:outline-none"
+                      disabled={isReadOnly}
+                      className="w-full bg-transparent bg-none italic border-none p-0 text-xs focus:ring-0 text-on-surface-variant/90 dark:text-on-surface-variant focus:outline-none disabled:opacity-85 disabled:cursor-default"
                       placeholder="Devise ou caricature de chouineur..."
                     />
                   </div>
@@ -250,21 +376,24 @@ export default function JoueursView({
                         const isSelected = player.color === col.id || (!player.color && getPlayerColorPreset(undefined, index).id === col.id);
                         const otherPlayerWhoTookIt = players.find((p, pIdx) => p.id !== player.id && (p.color || getPlayerColorPreset(undefined, pIdx).id) === col.id);
                         const isTakenByOther = !!otherPlayerWhoTookIt;
+                        const colDisabled = isReadOnly || isTakenByOther;
 
                         return (
                           <button
                             key={col.id}
                             type="button"
-                            disabled={isTakenByOther}
-                            onClick={() => !isTakenByOther && handleColorChange(player.id, col.id)}
+                            disabled={colDisabled}
+                            onClick={() => !colDisabled && handleColorChange(player.id, col.id)}
                             className={`w-7 h-7 rounded-full transition-all duration-200 relative flex items-center justify-center border-2 ${
                               isSelected 
                                 ? "border-on-surface scale-110 shadow-md ring-2 ring-primary/45" 
                                 : isTakenByOther
                                 ? "border-transparent opacity-25 cursor-not-allowed saturate-30"
+                                : colDisabled
+                                ? "opacity-30 cursor-default"
                                 : "border-outline-variant hover:border-on-surface hover:scale-115 cursor-pointer"
                             } ${col.bgClass}`}
-                            title={isTakenByOther ? `${col.name} (Pris par ${otherPlayerWhoTookIt.name})` : col.name}
+                            title={isTakenByOther ? `${col.name} (Pris par ${otherPlayerWhoTookIt.name})` : isReadOnly ? `${col.name} (Lecture Seule)` : col.name}
                           >
                             {isSelected && (
                               <svg className="w-3.5 h-3.5 text-white stroke-[3] drop-shadow-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -288,20 +417,22 @@ export default function JoueursView({
         })}
 
         {/* Dynamic add Chouineur button */}
-        <button
-          onClick={handleAddPlayer}
-          disabled={players.length >= 5}
-          className={`group flex items-center justify-center gap-2 p-5 border-4 border-dashed rounded-xl transition-all duration-300 relative ${
-            players.length >= 5
-              ? "border-outline-variant/40 text-on-surface-variant/40 bg-black/5 dark:bg-white/5 cursor-not-allowed select-none"
-              : "border-outline-variant/80 dark:border-outline-variant/40 text-on-surface-variant dark:text-on-surface-variant/80 hover:border-primary hover:text-primary dark:hover:border-primary-fixed-dim dark:hover:text-primary-fixed-dim hover:bg-primary/5 hover:translate-y-[-2px] cursor-pointer"
-          }`}
-        >
-          <Plus className={`w-6 h-6 ${players.length >= 5 ? "" : "group-hover:rotate-180 transition-transform duration-500"}`} />
-          <span className="font-headline-sm uppercase tracking-wider text-base sm:text-lg">
-            {players.length >= 5 ? "Nouveau Chouineur (Max. 5 atteint)" : "Nouveau Chouineur"}
-          </span>
-        </button>
+        {!isReadOnly && (
+          <button
+            onClick={handleAddPlayer}
+            disabled={players.length >= 5}
+            className={`group flex items-center justify-center gap-2 p-5 border-4 border-dashed rounded-xl transition-all duration-300 relative ${
+              players.length >= 5
+                ? "border-outline-variant/40 text-on-surface-variant/40 bg-black/5 dark:bg-white/5 cursor-not-allowed select-none"
+                : "border-outline-variant/80 dark:border-outline-variant/40 text-on-surface-variant dark:text-on-surface-variant/80 hover:border-primary hover:text-primary dark:hover:border-primary-fixed-dim dark:hover:text-primary-fixed-dim hover:bg-primary/5 hover:translate-y-[-2px] cursor-pointer"
+            }`}
+          >
+            <Plus className={`w-6 h-6 ${players.length >= 5 ? "" : "group-hover:rotate-180 transition-transform duration-500"}`} />
+            <span className="font-headline-sm uppercase tracking-wider text-base sm:text-lg">
+              {players.length >= 5 ? "Nouveau Chouineur (Max. 5 atteint)" : "Nouveau Chouineur"}
+            </span>
+          </button>
+        )}
       </div>
 
       {/* Warning Callout Box */}
@@ -319,29 +450,43 @@ export default function JoueursView({
 
       {/* Primary Lancer la Partie CTA Trigger */}
       <div className="mt-8 px-1 pb-4">
-        <button
-          onClick={onStartGame}
-          className={`w-full py-4 px-6 rounded-xl font-headline-sm text-base sm:text-lg uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-3 shadow-lg relative border-2 ${
-            players.length < 3 || players.length > 5
-              ? "bg-stone-100 dark:bg-stone-800/40 text-stone-400 dark:text-stone-500 border-dashed border-stone-300 dark:border-stone-700 cursor-not-allowed select-none"
-              : "bg-primary text-on-primary hover:bg-primary-hover border-transparent hover:translate-y-[-2px] active:translate-y-[0px] cursor-pointer"
-          }`}
-        >
-          <Play className={`w-5 h-5 shrink-0 ${players.length >= 3 && players.length <= 5 ? "animate-pulse" : ""}`} />
-          <span>Commencer la Partie ({players.length} Chouineurs)</span>
-        </button>
+        {isReadOnly ? (
+          <div className="sketchy-border bg-blue-100/10 dark:bg-blue-950/20 p-6 rounded-xl flex flex-col items-center justify-center text-center gap-3">
+            <span className="w-10 h-10 border-4 border-primary border-t-transparent animate-spin rounded-full"></span>
+            <div className="text-sm">
+              <p className="font-black text-primary dark:text-primary-fixed-dim uppercase tracking-wider">Lobby Royal Multijoueur actif 👑</p>
+              <p className="text-xs text-on-surface-variant italic mt-1 max-w-sm">
+                En attente du Maître du Jeu pour finaliser la liste et lancer le sacre !
+              </p>
+            </div>
+          </div>
+        ) : (
+          <>
+            <button
+              onClick={onStartGame}
+              className={`w-full py-4 px-6 rounded-xl font-headline-sm text-base sm:text-lg uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-3 shadow-lg relative border-2 ${
+                players.length < 3 || players.length > 5
+                  ? "bg-stone-100 dark:bg-stone-800/40 text-stone-400 dark:text-stone-500 border-dashed border-stone-300 dark:border-stone-700 cursor-not-allowed select-none"
+                  : "bg-primary text-on-primary hover:bg-primary-hover border-transparent hover:translate-y-[-2px] active:translate-y-[0px] cursor-pointer"
+              }`}
+            >
+              <Play className={`w-5 h-5 shrink-0 ${players.length >= 3 && players.length <= 5 ? "animate-pulse" : ""}`} />
+              <span>Commencer la Partie ({players.length} Chouineurs)</span>
+            </button>
 
-        {players.length < 3 && (
-          <div className="flex items-center justify-center gap-1.5 mt-2.5 text-red-600 dark:text-red-400 font-semibold text-xs text-center">
-            <span className="inline-block animate-bounce">⚠️</span>
-            <span>Un minimum de 3 Chouineurs est requis pour jouer. Ajoutez d'autres joueurs !</span>
-          </div>
-        )}
-        {players.length > 5 && (
-          <div className="flex items-center justify-center gap-1.5 mt-2.5 text-red-600 dark:text-red-400 font-semibold text-xs text-center">
-            <span className="inline-block animate-bounce">⚠️</span>
-            <span>Un maximum de 5 Chouineurs est autorisé pour jouer. Retirez des joueurs !</span>
-          </div>
+            {players.length < 3 && (
+              <div className="flex items-center justify-center gap-1.5 mt-2.5 text-red-600 dark:text-red-400 font-semibold text-xs text-center">
+                <span className="inline-block animate-bounce">⚠️</span>
+                <span>Un minimum de 3 Chouineurs est requis pour jouer. Ajoutez d'autres joueurs !</span>
+              </div>
+            )}
+            {players.length > 5 && (
+              <div className="flex items-center justify-center gap-1.5 mt-2.5 text-red-600 dark:text-red-400 font-semibold text-xs text-center">
+                <span className="inline-block animate-bounce">⚠️</span>
+                <span>Un maximum de 5 Chouineurs est autorisé pour jouer. Retirez des joueurs !</span>
+              </div>
+            )}
+          </>
         )}
       </div>
 
