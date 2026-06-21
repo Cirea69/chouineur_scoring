@@ -414,6 +414,24 @@ export default function App() {
     localStorage.setItem("chouine_historique", JSON.stringify(historique));
   }, [historique]);
 
+  // Charger l'historique depuis la base de données au montage
+  useEffect(() => {
+    const fetchHistory = async () => {
+      try {
+        const response = await fetch("/api/history");
+        if (response.ok) {
+          const data = await response.json();
+          if (Array.isArray(data)) {
+            setHistorique(data);
+          }
+        }
+      } catch (e) {
+        console.warn("Échec du chargement de l'historique sur le serveur, utilisation du cache local.");
+      }
+    };
+    fetchHistory();
+  }, []);
+
   const toggleTheme = () => {
     setTheme((prev) => (prev === "light" ? "dark" : "light"));
   };
@@ -476,13 +494,21 @@ export default function App() {
       const losers = sorted.slice(1).map((lp) => ({ name: lp.name, score: lp.scoreActuel }));
 
       const newHistoryEntry: HistoriquePartie = {
-        id: Math.random().toString(36).substr(2, 9),
+        id: Math.random().toString(36).substring(2, 9),
         date: new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }),
         gagnant: { name: winner.name, score: winner.scoreActuel },
         perdants: losers,
       };
 
       setHistorique((prev) => [newHistoryEntry, ...prev]);
+      
+      // Save game history to database
+      fetch("/api/history", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newHistoryEntry)
+      }).catch((e) => console.warn("Erreur d'enregistrement d'historique:", e));
+
       setGameStatus("termine");
       setMancheActuelle(maxRounds);
       setCurrentTab("scores"); // basculer directement vers le Podium final !
@@ -529,6 +555,11 @@ export default function App() {
     setGameStatus("saisie");
     setHistorique([]);
     setCurrentTab("players");
+    
+    // Clear history on database
+    fetch("/api/history-clear", {
+      method: "POST"
+    }).catch((e) => console.warn("Erreur de nettoyage d'historique:", e));
   };
 
   // Simuler le lobby multijoueur virtuel
@@ -552,6 +583,11 @@ export default function App() {
 
   const handleDeleteHistoryEntry = (id: string) => {
     setHistorique((prev) => prev.filter((entry) => entry.id !== id));
+    
+    // Delete log entry on database
+    fetch(`/api/history/${id}`, {
+      method: "DELETE"
+    }).catch((e) => console.warn("Erreur de suppression du log d'historique:", e));
   };
 
   // Déterminer le titre du bandeau en haut dynamiquement

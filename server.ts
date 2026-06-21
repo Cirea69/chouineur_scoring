@@ -10,7 +10,44 @@ interface Room {
 const app = express();
 const PORT = 3000;
 
+import fs from "fs";
+
 app.use(express.json());
+
+// File path for durable local persistence (persists rooms & history over restarts)
+const DB_FILE = path.join(process.cwd(), "db.json");
+
+function loadDb(): { rooms: Record<string, Room>; historyRecs: any[] } {
+  try {
+    if (fs.existsSync(DB_FILE)) {
+      const data = fs.readFileSync(DB_FILE, "utf-8");
+      if (data.trim()) {
+        const parsed = JSON.parse(data);
+        return {
+          rooms: parsed.rooms || {},
+          historyRecs: parsed.historyRecs || parsed.history || []
+        };
+      }
+    }
+  } catch (e) {
+    console.error("[SERVER] Erreur lors de la lecture de db.json:", e);
+  }
+  return { rooms: {}, historyRecs: [] };
+}
+
+function saveDb(roomsData: Record<string, Room>, historyData: any[]) {
+  try {
+    const data = JSON.stringify({ rooms: roomsData, historyRecs: historyData }, null, 2);
+    fs.writeFileSync(DB_FILE, data, "utf-8");
+  } catch (e) {
+    console.error("[SERVER] Erreur de sauvegarde dans db.json:", e);
+  }
+}
+
+// Load initial database state
+const dbState = loadDb();
+const rooms: Record<string, Room> = dbState.rooms;
+let historyRecs: any[] = dbState.historyRecs;
 
 // Logger and CORS middleware
 app.use((req, res, next) => {
@@ -33,9 +70,6 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
     error: err.message || "Une erreur interne du serveur est survenue."
   });
 });
-
-// In-memory store for rooms
-const rooms: Record<string, Room> = {};
 
 // Keep track of connected SSE clients per room code
 const clients: Record<string, express.Response[]> = {};
@@ -81,6 +115,7 @@ app.post("/api/rooms", (req, res) => {
     code: formattedCode,
     state: state || {}
   };
+  saveDb(rooms, historyRecs);
   res.json(rooms[formattedCode]);
 });
 
@@ -95,6 +130,7 @@ app.post("/api/rooms/:code", (req, res) => {
     rooms[code].state = state || rooms[code].state;
   }
   
+  saveDb(rooms, historyRecs);
   // Broadcast update to all clients subscribed to this room
   broadcastToRoom(code, rooms[code].state);
   res.json({ success: true, room: rooms[code] });
@@ -126,11 +162,46 @@ app.post("/api/rooms/:code/join", (req, res) => {
   const playerExists = room.state.players.some((p: any) => p.id === player.id);
   if (!playerExists) {
     room.state.players.push(player);
+    saveDb(rooms, historyRecs);
     // Broadcast active join in real-time
     broadcastToRoom(code, room.state);
   }
 
   res.json({ success: true, state: room.state });
+});
+
+// 4b. History Endpoint (GET all historical game details)
+app.get("/api/history", (req, res) => {
+  res.json(historyRecs);
+});
+
+// 4c. History Endpoint (POST append new finished game detail)
+app.post("/api/history", (req, res) => {
+  const newEntry = req.body;
+  if (!newEntry || !newEntry.id) {
+    return res.status(400).json({ error: "Données d'historique invalides." });
+  }
+  const exists = historyRecs.some((h) => h.id === newEntry.id);
+  if (!exists) {
+    historyRecs = [newEntry, ...historyRecs];
+    saveDb(rooms, historyRecs);
+  }
+  res.json({ success: true, history: historyRecs });
+});
+
+// 4d. History Endpoint (DELETE a individual log entry)
+app.delete("/api/history/:id", (req, res) => {
+  const { id } = req.params;
+  historyRecs = historyRecs.filter((h) => h.id !== id);
+  saveDb(rooms, historyRecs);
+  res.json({ success: true, history: historyRecs });
+});
+
+// 4e. History Endpoint (POST clean/clear history)
+app.post("/api/history-clear", (req, res) => {
+  historyRecs = [];
+  saveDb(rooms, historyRecs);
+  res.json({ success: true, history: [] });
 });
 
 // 5. Server-Sent Events (SSE) stream for real-time subscription
