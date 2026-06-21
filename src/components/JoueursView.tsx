@@ -16,6 +16,7 @@ interface JoueursViewProps {
   onJoinOnlineRoom?: (code: string, name: string) => void;
   onDisconnectRoom?: () => void;
   roomCode?: string | null;
+  clientId?: string;
 }
 
 const DEFAULT_SUBTITLES = [
@@ -45,8 +46,17 @@ export default function JoueursView({
   onJoinOnlineRoom,
   onDisconnectRoom,
   roomCode = null,
+  clientId,
 }: JoueursViewProps) {
   const isReadOnly = multiplayerMode === "multiplayer" && !isGM;
+
+  const isPlayerEditable = (p: Player) => {
+    if (isSpectator) return false;
+    if (multiplayerMode === "local") return true;
+    if (isGM) return true;
+    return p.id === clientId;
+  };
+
   const [joinCode, setJoinCode] = useState("");
   const [joinName, setJoinName] = useState("");
   const [showJoinForm, setShowJoinForm] = useState(false);
@@ -318,7 +328,7 @@ export default function JoueursView({
                     />
                   </div>
                   {/* Camera overlay button */}
-                  {!isReadOnly && (
+                  {isPlayerEditable(player) && (
                     <button
                       onClick={() =>
                         setAvatarPickerState({ isOpen: true, playerId: player.id })
@@ -356,7 +366,7 @@ export default function JoueursView({
                     type="text"
                     value={player.name}
                     onChange={(e) => handleNameChange(player.id, e.target.value)}
-                    disabled={isReadOnly}
+                    disabled={!isPlayerEditable(player)}
                     className="w-full bg-transparent border-b-2 border-outline-variant/60 focus:border-primary focus:ring-0 text-headline-sm dark:text-on-surface font-headline-sm px-0 py-1 transition-colors italic focus:outline-none disabled:opacity-85 disabled:cursor-default"
                     placeholder="Nom du chouineur..."
                   />
@@ -370,7 +380,7 @@ export default function JoueursView({
                       onChange={(e) =>
                         handleSubtitleChange(player.id, e.target.value)
                       }
-                      disabled={isReadOnly}
+                      disabled={!isPlayerEditable(player)}
                       className="w-full bg-transparent bg-none italic border-none p-0 text-xs focus:ring-0 text-on-surface-variant/90 dark:text-on-surface-variant focus:outline-none disabled:opacity-85 disabled:cursor-default"
                       placeholder="Devise ou caricature de chouineur..."
                     />
@@ -387,7 +397,7 @@ export default function JoueursView({
                         const isSelected = player.color === col.id || (!player.color && getPlayerColorPreset(undefined, index).id === col.id);
                         const otherPlayerWhoTookIt = players.find((p, pIdx) => p.id !== player.id && (p.color || getPlayerColorPreset(undefined, pIdx).id) === col.id);
                         const isTakenByOther = !!otherPlayerWhoTookIt;
-                        const colDisabled = isReadOnly || isTakenByOther;
+                        const colDisabled = !isPlayerEditable(player) || isTakenByOther;
 
                         return (
                           <button
@@ -404,7 +414,7 @@ export default function JoueursView({
                                 ? "opacity-30 cursor-default"
                                 : "border-outline-variant hover:border-on-surface hover:scale-115 cursor-pointer"
                             } ${col.bgClass}`}
-                            title={isTakenByOther ? `${col.name} (Pris par ${otherPlayerWhoTookIt.name})` : isReadOnly ? `${col.name} (Lecture Seule)` : col.name}
+                            title={isTakenByOther ? `${col.name} (Pris par ${otherPlayerWhoTookIt.name})` : !isPlayerEditable(player) ? `${col.name} (Lecture Seule)` : col.name}
                           >
                             {isSelected && (
                               <svg className="w-3.5 h-3.5 text-white stroke-[3] drop-shadow-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor">

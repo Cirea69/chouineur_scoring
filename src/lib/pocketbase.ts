@@ -22,6 +22,7 @@ export interface GameState {
   gameStatus: "saisie" | "termine";
   currentTab: "players" | "game" | "scores";
   hostId: string;
+  updatedAt?: number;
 }
 
 // In AI Studio / Cloud Run, PocketBase is typically reverse proxied on the same origin / port or via VITE_POCKETBASE_URL.

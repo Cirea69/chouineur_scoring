@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Player, Game, HistoriquePartie, Theme } from "./types";
 import TopAppBar from "./components/TopAppBar";
 import BottomNavBar from "./components/BottomNavBar";
@@ -111,6 +111,12 @@ export default function App() {
     return DEFAULT_PLAYERS;
   });
 
+  // Reference for local conflict resolution to track when state is modified locally
+  const lastLocalUpdateTimeRef = useRef<number>(0);
+  const markLocalChange = () => {
+    lastLocalUpdateTimeRef.current = Date.now();
+  };
+
   // 3. Initialiser les paramètres de jeu (fixé à 4 manches selon les règles de Chouine)
   const [maxRounds] = useState<number>(4);
 
@@ -161,7 +167,13 @@ export default function App() {
         return;
       }
     }
+    markLocalChange();
     setCurrentTab(tab);
+  };
+
+  const handleUpdatePlayers = (newPlayers: Player[]) => {
+    markLocalChange();
+    setPlayers(newPlayers);
   };
 
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -367,6 +379,7 @@ export default function App() {
             gameStatus,
             currentTab,
             hostId: clientId,
+            updatedAt: lastLocalUpdateTimeRef.current,
           });
         } catch (err) {
           console.error("Échec de la synchronisation GM vers le serveur:", err);
@@ -377,10 +390,40 @@ export default function App() {
     }
   }, [multiplayerMode, isGM, roomCode, players, mancheActuelle, gameStatus, currentTab, clientId]);
 
+  // Effet de synchronisation pour les Invités quand ils mettent à jour leur propre profil
+  useEffect(() => {
+    if (multiplayerMode === "multiplayer" && !isGM && roomCode) {
+      const now = Date.now();
+      if (now - lastLocalUpdateTimeRef.current < 5000) {
+        const delayDebounce = setTimeout(async () => {
+          try {
+            await pb.saveRoomState(roomCode, {
+              players,
+              mancheActuelle,
+              gameStatus,
+              currentTab,
+              hostId: "", // non-host
+              updatedAt: lastLocalUpdateTimeRef.current,
+            });
+          } catch (err) {
+            console.error("Échec de la synchronisation Invité vers le serveur:", err);
+          }
+        }, 800);
+
+        return () => clearTimeout(delayDebounce);
+      }
+    }
+  }, [multiplayerMode, isGM, roomCode, players, clientId]);
+
   // Effet de synchronisation temps réel unifié (Spectateurs & Joueurs)
   useEffect(() => {
     if (multiplayerMode === "multiplayer" && roomCode) {
       const unsubscribe = pb.onSnapshot(roomCode, (serverState) => {
+        // Résolution de conflits : si un changement local récent est plus récent ou identique au snapshot, on l'ignore.
+        if (serverState.updatedAt && serverState.updatedAt <= lastLocalUpdateTimeRef.current) {
+          return;
+        }
+
         if (!isGM) {
           // Guests & Spectators always sync everything from the server
           if (serverState.players) {
@@ -417,8 +460,8 @@ export default function App() {
                 const sp = serverState.players.find(p => p.id === lp.id);
                 // Keep local modifications on the GM's own player entry, but pull fresh names of guests!
                 if (sp && lp.id !== clientId) {
-                  if (sp.name !== lp.name || sp.avatar !== lp.avatar || sp.color !== lp.color) {
-                    return { ...lp, name: sp.name, avatar: sp.avatar, color: sp.color };
+                  if (sp.name !== lp.name || sp.avatar !== lp.avatar || sp.color !== lp.color || sp.subtitle !== lp.subtitle) {
+                    return { ...lp, name: sp.name, avatar: sp.avatar, color: sp.color, subtitle: sp.subtitle };
                   }
                 }
                 return lp;
@@ -506,6 +549,7 @@ export default function App() {
       totalScore: number;
     }
   }) => {
+    markLocalChange();
     const nextPlayers = players.map((p) => {
       const pData = roundData[p.id] || {
         plis: 0,
@@ -590,6 +634,7 @@ export default function App() {
   };
 
   const handleResetGame = () => {
+    markLocalChange();
     const wiped = players.map((p) => ({
       ...p,
       scoreActuel: 0,
@@ -608,6 +653,7 @@ export default function App() {
   };
 
   const handleResetAll = () => {
+    markLocalChange();
     const cleanPlayers = DEFAULT_PLAYERS.map((p) => ({
       ...p,
       scoreActuel: 0,
@@ -684,7 +730,7 @@ export default function App() {
         {currentTab === "players" && (
           <JoueursView
             players={players}
-            onUpdatePlayers={setPlayers}
+            onUpdatePlayers={handleUpdatePlayers}
             onStartGame={handleStartGame}
             isGM={isGM}
             isSpectator={isSpectator}
@@ -693,6 +739,7 @@ export default function App() {
             onJoinOnlineRoom={handleJoinOnlineRoom}
             onDisconnectRoom={handleDisconnectRoom}
             roomCode={roomCode}
+            clientId={clientId}
           />
         )}
 
