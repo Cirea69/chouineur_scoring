@@ -25,9 +25,39 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 var import_express = __toESM(require("express"), 1);
 var import_path = __toESM(require("path"), 1);
 var import_vite = require("vite");
+var import_fs = __toESM(require("fs"), 1);
 var app = (0, import_express.default)();
 var PORT = 3e3;
 app.use(import_express.default.json());
+var DB_FILE = import_path.default.join(process.cwd(), "db.json");
+function loadDb() {
+  try {
+    if (import_fs.default.existsSync(DB_FILE)) {
+      const data = import_fs.default.readFileSync(DB_FILE, "utf-8");
+      if (data.trim()) {
+        const parsed = JSON.parse(data);
+        return {
+          rooms: parsed.rooms || {},
+          historyRecs: parsed.historyRecs || parsed.history || []
+        };
+      }
+    }
+  } catch (e) {
+    console.error("[SERVER] Erreur lors de la lecture de db.json:", e);
+  }
+  return { rooms: {}, historyRecs: [] };
+}
+function saveDb(roomsData, historyData) {
+  try {
+    const data = JSON.stringify({ rooms: roomsData, historyRecs: historyData }, null, 2);
+    import_fs.default.writeFileSync(DB_FILE, data, "utf-8");
+  } catch (e) {
+    console.error("[SERVER] Erreur de sauvegarde dans db.json:", e);
+  }
+}
+var dbState = loadDb();
+var rooms = dbState.rooms;
+var historyRecs = dbState.historyRecs;
 app.use((req, res, next) => {
   console.log(`[API REQUEST] ${req.method} ${req.url}`);
   res.header("Access-Control-Allow-Origin", "*");
@@ -44,7 +74,6 @@ app.use((err, req, res, next) => {
     error: err.message || "Une erreur interne du serveur est survenue."
   });
 });
-var rooms = {};
 var clients = {};
 function broadcastToRoom(code, data) {
   const formattedCode = code.toUpperCase();
@@ -80,6 +109,7 @@ app.post("/api/rooms", (req, res) => {
     code: formattedCode,
     state: state || {}
   };
+  saveDb(rooms, historyRecs);
   res.json(rooms[formattedCode]);
 });
 app.post("/api/rooms/:code", (req, res) => {
@@ -90,6 +120,7 @@ app.post("/api/rooms/:code", (req, res) => {
   } else {
     rooms[code].state = state || rooms[code].state;
   }
+  saveDb(rooms, historyRecs);
   broadcastToRoom(code, rooms[code].state);
   res.json({ success: true, room: rooms[code] });
 });
@@ -112,9 +143,36 @@ app.post("/api/rooms/:code/join", (req, res) => {
   const playerExists = room.state.players.some((p) => p.id === player.id);
   if (!playerExists) {
     room.state.players.push(player);
+    saveDb(rooms, historyRecs);
     broadcastToRoom(code, room.state);
   }
   res.json({ success: true, state: room.state });
+});
+app.get("/api/history", (req, res) => {
+  res.json(historyRecs);
+});
+app.post("/api/history", (req, res) => {
+  const newEntry = req.body;
+  if (!newEntry || !newEntry.id) {
+    return res.status(400).json({ error: "Donn\xE9es d'historique invalides." });
+  }
+  const exists = historyRecs.some((h) => h.id === newEntry.id);
+  if (!exists) {
+    historyRecs = [newEntry, ...historyRecs];
+    saveDb(rooms, historyRecs);
+  }
+  res.json({ success: true, history: historyRecs });
+});
+app.delete("/api/history/:id", (req, res) => {
+  const { id } = req.params;
+  historyRecs = historyRecs.filter((h) => h.id !== id);
+  saveDb(rooms, historyRecs);
+  res.json({ success: true, history: historyRecs });
+});
+app.post("/api/history-clear", (req, res) => {
+  historyRecs = [];
+  saveDb(rooms, historyRecs);
+  res.json({ success: true, history: [] });
 });
 app.get("/api/rooms/:code/stream", (req, res) => {
   const code = req.params.code.toUpperCase();
