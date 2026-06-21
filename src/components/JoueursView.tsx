@@ -140,8 +140,8 @@ export default function JoueursView({
   };
 
   const handleRemovePlayer = (id: string) => {
-    if (players.length <= 3) {
-      alert("La Chouine se joue à 3 joueurs minimum !");
+    if (players.length <= 1) {
+      alert("Il doit y avoir au moins un joueur !");
       return;
     }
     const filtered = players.filter((p) => p.id !== id);
@@ -350,7 +350,7 @@ export default function JoueursView({
                     </label>
 
                     {/* Button trash to delete a player */}
-                    {players.length > 3 && !isReadOnly && (
+                    {players.length > 1 && !isReadOnly && (
                       <button
                         onClick={() => handleRemovePlayer(player.id)}
                         className="p-1.5 text-on-surface-variant hover:text-error transition-colors rounded-full hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer"

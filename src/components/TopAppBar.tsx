@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Sparkles, Settings, Users, Laptop, Download, Server, Database, Check, Loader2, AlertCircle } from "lucide-react";
+import { Sparkles, Settings, Users, Laptop, Download, Server, Database, Check, Loader2, AlertCircle, Smartphone, Wifi } from "lucide-react";
 import ThemeToggle from "./ThemeToggle";
 import { Theme } from "../types";
 import { getPocketBaseUrl, setPocketBaseUrl } from "../lib/pocketbase";
@@ -10,8 +10,11 @@ interface TopAppBarProps {
   toggleTheme: () => void;
   openSettings: () => void;
   multiplayerMode: "local" | "simulated" | "multiplayer";
+  onUpdateMultiplayerMode?: (mode: "local" | "simulated" | "multiplayer") => void;
   onInstallClick: () => void;
   isStandalone: boolean;
+  roomCode?: string | null;
+  onDisconnectRoom?: () => void;
 }
 
 export default function TopAppBar({
@@ -20,14 +23,19 @@ export default function TopAppBar({
   toggleTheme,
   openSettings,
   multiplayerMode,
+  onUpdateMultiplayerMode,
   onInstallClick,
   isStandalone,
+  roomCode = null,
+  onDisconnectRoom,
 }: TopAppBarProps) {
   const [isServerOpen, setIsServerOpen] = useState(false);
+  const [isMultiplayerOpen, setIsMultiplayerOpen] = useState(false);
   const [serverUrl, setServerUrl] = useState(() => getPocketBaseUrl());
   const [testStatus, setTestStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [testError, setTestError] = useState("");
   const serverDropdownRef = useRef<HTMLDivElement>(null);
+  const multiplayerDropdownRef = useRef<HTMLDivElement>(null);
 
   // Sync back when dropdown opens to show exact current state
   useEffect(() => {
@@ -47,14 +55,20 @@ export default function TopAppBar({
       ) {
         setIsServerOpen(false);
       }
+      if (
+        multiplayerDropdownRef.current &&
+        !multiplayerDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsMultiplayerOpen(false);
+      }
     }
-    if (isServerOpen) {
+    if (isServerOpen || isMultiplayerOpen) {
       document.addEventListener("mousedown", handleClickOutside);
     }
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isServerOpen]);
+  }, [isServerOpen, isMultiplayerOpen]);
 
   const handleTestAndSave = async () => {
     if (!serverUrl.trim()) {
@@ -156,6 +170,140 @@ export default function TopAppBar({
             </button>
           )}
           <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
+          
+          {/* Multiplayer Switcher Dropdown */}
+          <div className="relative" ref={multiplayerDropdownRef}>
+            <button
+              onClick={() => setIsMultiplayerOpen(!isMultiplayerOpen)}
+              className={`p-2 hover:bg-black/5 dark:hover:bg-white/10 transition-colors rounded-full active:scale-95 duration-150 flex items-center justify-center cursor-pointer relative ${
+                isMultiplayerOpen ? "text-primary dark:text-primary-fixed-dim bg-black/5 dark:bg-white/10" : "text-primary dark:text-primary-fixed-dim"
+              }`}
+              title="Sélectionner le Mode Multijoueur"
+            >
+              {multiplayerMode === "local" ? (
+                <Laptop className="w-6 h-6 text-primary dark:text-primary-fixed-dim" />
+              ) : multiplayerMode === "simulated" ? (
+                <Smartphone className="w-6 h-6 text-[#9c27b0] dark:text-[#ea80fc] animate-pulse" />
+              ) : (
+                <Wifi className="w-6 h-6 text-green-500 dark:text-green-400 animate-pulse" />
+              )}
+              {multiplayerMode !== "local" && (
+                <span className="absolute bottom-1 right-1 w-2.5 h-2.5 bg-green-500 rounded-full border border-white dark:border-surface-variant flex animate-ping" />
+              )}
+            </button>
+
+            {isMultiplayerOpen && (
+              <div
+                className="absolute right-0 mt-3 w-80 bg-background dark:bg-surface-dim hand-drawn-border p-4 rounded-xl z-50 text-left space-y-3"
+                style={{ filter: "drop-shadow(0 10px 15px rgba(0,0,0,0.15))" }}
+              >
+                <div className="flex items-center gap-2 border-b border-outline-variant pb-2">
+                  <Users className="w-5 h-5 text-secondary shrink-0" />
+                  <span className="font-label-md text-xs font-bold text-on-surface">Mode de Jeu Multijoueur</span>
+                </div>
+
+                <div className="space-y-1">
+                  {/* Option: Local Pass-and-Play */}
+                  <button
+                    onClick={() => {
+                      if (multiplayerMode === "multiplayer" && roomCode) {
+                        if (confirm("Voulez-vous quitter le salon multijoueurs pour repasser en Pass-and-Play local ?")) {
+                          onDisconnectRoom?.();
+                          onUpdateMultiplayerMode?.("local");
+                        }
+                      } else {
+                        onUpdateMultiplayerMode?.("local");
+                      }
+                      setIsMultiplayerOpen(false);
+                    }}
+                    className={`w-full p-2.5 rounded-lg text-left flex items-start gap-2.5 transition-all text-xs hover:bg-black/5 dark:hover:bg-white/5 border ${
+                      multiplayerMode === "local"
+                        ? "border-primary bg-primary/5 text-primary font-bold dark:border-primary-fixed-dim"
+                        : "border-transparent text-on-surface"
+                    }`}
+                  >
+                    <Laptop className="w-4 h-4 text-secondary shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-black text-sm">Pass-and-Play Local</p>
+                      <p className="text-[10px] text-on-surface-variant/90 font-normal">Chacun son tour sur le même appareil physique.</p>
+                    </div>
+                  </button>
+
+                  {/* Option: Simulated online */}
+                  <button
+                    onClick={() => {
+                      if (multiplayerMode === "multiplayer" && roomCode) {
+                        if (confirm("Voulez-vous quitter le salon multijoueurs pour utiliser le simulateur ?")) {
+                          onDisconnectRoom?.();
+                          onUpdateMultiplayerMode?.("simulated");
+                        }
+                      } else {
+                        onUpdateMultiplayerMode?.("simulated");
+                      }
+                      setIsMultiplayerOpen(false);
+                    }}
+                    className={`w-full p-2.5 rounded-lg text-left flex items-start gap-2.5 transition-all text-xs hover:bg-black/5 dark:hover:bg-white/5 border ${
+                      multiplayerMode === "simulated"
+                        ? "border-primary bg-primary/5 text-primary font-bold dark:border-primary-fixed-dim"
+                        : "border-transparent text-on-surface"
+                    }`}
+                  >
+                    <Smartphone className="w-4 h-4 text-[#9c27b0] dark:text-[#ea80fc] shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-black text-sm">Simulateur en ligne</p>
+                      <p className="text-[10px] text-on-surface-variant/90 font-normal">S'entraîner avec un salon virtuel automatisé.</p>
+                    </div>
+                  </button>
+
+                  {/* Option: Real Multiplayer */}
+                  <button
+                    onClick={() => {
+                      onUpdateMultiplayerMode?.("multiplayer");
+                      setIsMultiplayerOpen(false);
+                    }}
+                    className={`w-full p-2.5 rounded-lg text-left flex items-start gap-2.5 transition-all text-xs hover:bg-black/5 dark:hover:bg-white/5 border ${
+                      multiplayerMode === "multiplayer"
+                        ? "border-primary bg-primary/5 text-primary font-bold dark:border-primary-fixed-dim"
+                        : "border-transparent text-on-surface"
+                    }`}
+                  >
+                    <Wifi className="w-4 h-4 text-green-500 dark:text-green-400 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-black text-sm">Multi-joueurs Réel</p>
+                      <p className="text-[10px] text-on-surface-variant/90 font-normal">Connectez plusieurs téléphones ou tablettes en direct !</p>
+                    </div>
+                  </button>
+                </div>
+
+                {multiplayerMode === "multiplayer" && (
+                  <div className="pt-2 border-t border-outline-variant/60 space-y-2">
+                    {roomCode ? (
+                      <div className="bg-primary/5 dark:bg-primary-fixed-dim/5 p-2 rounded-lg border border-primary/20 flex flex-col items-center justify-center text-center">
+                        <span className="text-[10px] font-bold uppercase text-primary tracking-widest leading-none">CODE DU SALON</span>
+                        <span className="font-black tracking-widest text-green-600 dark:text-green-400 text-xl mt-1 select-all">{roomCode}</span>
+                        <span className="text-[9px] text-on-surface-variant italic mt-1 leading-tight">Actif & synchronisé en temps réel</span>
+                        {onDisconnectRoom && (
+                          <button
+                            onClick={() => {
+                              onDisconnectRoom();
+                              setIsMultiplayerOpen(false);
+                            }}
+                            className="mt-2 w-full py-1.5 px-2 bg-red-600 hover:bg-red-700 text-white font-bold text-[10px] rounded hover:shadow duration-100 transition-all select-none cursor-pointer"
+                          >
+                            Quitter le salon
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-[10px] text-on-surface-variant/90 italic border border-outline-variant/60 bg-black/5 dark:bg-white/5 p-2 rounded-lg text-center">
+                        Créez ou rejoignez un salon depuis l'onglet <strong>Joueurs</strong> en bas de l'écran !
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
           
           <div className="relative" ref={serverDropdownRef}>
             <button

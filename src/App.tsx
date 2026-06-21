@@ -7,7 +7,7 @@ import PartieView from "./components/PartieView";
 import ScoresView from "./components/ScoresView";
 import SettingsDialog from "./components/SettingsDialog";
 import PwaInstallDialog from "./components/PwaInstallDialog";
-import { pb } from "./lib/pocketbase";
+import { pb, client } from "./lib/pocketbase";
 
 // Les fameux avatars originaux des Chouineurs maquettés !
 const DEFAULT_PLAYERS: Player[] = [
@@ -356,7 +356,12 @@ export default function App() {
     }
   };
 
-  const handleDisconnectRoom = () => {
+  const handleDisconnectRoom = async () => {
+    const formerRoomCode = roomCode;
+    const pId = clientId;
+    const wasHost = isGM;
+    const wasMultiplayer = multiplayerMode === "multiplayer";
+
     setMultiplayerMode("local");
     setRoomCode(null);
     setIsGM(true);
@@ -365,6 +370,25 @@ export default function App() {
     setMancheActuelle(2); // Match Chouine maquette default starting round (Manche 2)
     setGameStatus("saisie");
     setCurrentTab("players");
+
+    if (wasMultiplayer && formerRoomCode) {
+      try {
+        if (!wasHost) {
+          // Si invité, se retirer proprement du salon
+          const record = await client.collection('rooms_chouineur').getFirstListItem(`code="${formerRoomCode.toUpperCase()}"`);
+          if (record && record.state) {
+            const gameState = record.state as any;
+            if (gameState.players) {
+              gameState.players = gameState.players.filter((p: any) => p.id !== pId);
+              gameState.updatedAt = Date.now();
+              await client.collection('rooms_chouineur').update(record.id, { state: gameState });
+            }
+          }
+        }
+      } catch (e) {
+        console.error("Erreur lors du retrait de l'invité du salon:", e);
+      }
+    }
     alert("Déconnecté du salon multijoueur. Roster local restauré.");
   };
 
@@ -721,8 +745,11 @@ export default function App() {
         toggleTheme={toggleTheme}
         openSettings={() => setSettingsOpen(true)}
         multiplayerMode={multiplayerMode}
+        onUpdateMultiplayerMode={setMultiplayerMode}
         onInstallClick={handleInstallClick}
         isStandalone={isStandalone}
+        roomCode={roomCode}
+        onDisconnectRoom={handleDisconnectRoom}
       />
 
       {/* 2. Conteneur principal fluide */}
