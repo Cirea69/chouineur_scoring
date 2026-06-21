@@ -12,6 +12,28 @@ const PORT = 3000;
 
 app.use(express.json());
 
+// Logger and CORS middleware
+app.use((req, res, next) => {
+  console.log(`[API REQUEST] ${req.method} ${req.url}`);
+  
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+  next();
+});
+
+// JSON Error catcher for parsing and other unexpected errors
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error("[SERVER Error]", err);
+  res.status(err.status || 500).json({
+    error: err.message || "Une erreur interne du serveur est survenue."
+  });
+});
+
 // In-memory store for rooms
 const rooms: Record<string, Room> = {};
 

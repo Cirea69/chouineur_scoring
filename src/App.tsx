@@ -148,20 +148,7 @@ export default function App() {
   });
 
   // 5. Interface UI active et dialogs
-  const [currentTab, setCurrentTab] = useState<"players" | "game" | "scores" > (() => {
-    const cachedPlayers = localStorage.getItem("chouine_players");
-    if (cachedPlayers) {
-      try {
-        const parsed = JSON.parse(cachedPlayers);
-        if (parsed && Array.isArray(parsed) && parsed.length >= 3 && parsed.length <= 5) {
-          return "game";
-        }
-      } catch (e) {
-        // ignorer
-      }
-    }
-    return "players";
-  });
+  const [currentTab, setCurrentTab] = useState<"players" | "game" | "scores">("players");
 
   const handleTabChange = (tab: "players" | "game" | "scores") => {
     if (tab === "game" || tab === "scores") {

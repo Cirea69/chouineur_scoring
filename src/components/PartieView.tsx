@@ -70,18 +70,11 @@ export default function PartieView({
     return initial;
   });
 
-  // 2. Plis count per player (0 to 7)
+  // 2. Plis count per player (0 to 7) - starts at 0 for all players
   const [plisCount, setPlisCount] = useState<{ [playerId: string]: number }>(() => {
     const initial: { [playerId: string]: number } = {};
-    // Give smart logical defaults summing to 7 if exactly 3 players to assist rapid entry
-    players.forEach((p, idx) => {
-      if (players.length === 3) {
-        initial[p.id] = idx === 0 ? 2 : idx === 1 ? 3 : 2;
-      } else if (players.length === 4) {
-        initial[p.id] = idx === 0 ? 2 : idx === 1 ? 2 : idx === 2 ? 2 : 1;
-      } else {
-        initial[p.id] = 1;
-      }
+    players.forEach((p) => {
+      initial[p.id] = 0;
     });
     return initial;
   });
@@ -113,18 +106,9 @@ export default function PartieView({
     const resetFlipping: { [playerId: string]: number } = {};
     const resetPoints: { [playerId: string]: number } = {};
 
-    players.forEach((p, idx) => {
+    players.forEach((p) => {
       resetPari[p.id] = getFirstAvailableCard(p);
-      
-      // Configuration par défaut intelligente des plis
-      if (players.length === 3) {
-        resetPlis[p.id] = idx === 0 ? 2 : idx === 1 ? 3 : 2;
-      } else if (players.length === 4) {
-        resetPlis[p.id] = idx === 0 ? 2 : idx === 1 ? 2 : idx === 2 ? 2 : 1;
-      } else {
-        resetPlis[p.id] = 1;
-      }
-
+      resetPlis[p.id] = 0; // Remettre à zéro les plis de la manche
       resetFlipping[p.id] = 0;
       resetPoints[p.id] = 0;
     });

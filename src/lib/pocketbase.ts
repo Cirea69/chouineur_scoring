@@ -55,11 +55,18 @@ export const pb = {
       })
     });
     if (!response.ok) {
-      try {
-        const errorBody = await response.json();
-        throw new Error(errorBody.error || `Erreur serveur (${response.status})`);
-      } catch (err: any) {
-        throw new Error(err.message || `Erreur HTTP (${response.status})`);
+      const isJson = response.headers.get("content-type")?.includes("application/json");
+      if (isJson) {
+        try {
+          const errorBody = await response.json();
+          throw new Error(errorBody.error || `Erreur serveur (${response.status})`);
+        } catch (err: any) {
+          throw new Error(err.message || `Erreur de traitement de données (${response.status})`);
+        }
+      } else {
+        const textStr = await response.text();
+        const snippet = textStr.substring(0, 100).replace(/<[^>]*>/g, "").trim();
+        throw new Error(`Le serveur de salon n'a pas pu traiter la demande (HTTP ${response.status}). Détail: ${snippet || 'Pas de détail disponible'}`);
       }
     }
   },
@@ -74,7 +81,17 @@ export const pb = {
       body: JSON.stringify({ state })
     });
     if (!response.ok) {
-      throw new Error("Erreur lors de la mise à jour du salon.");
+      const isJson = response.headers.get("content-type")?.includes("application/json");
+      if (isJson) {
+        try {
+          const errorBody = await response.json();
+          throw new Error(errorBody.error || `Erreur serveur - code ${response.status}`);
+        } catch (err: any) {
+          throw new Error(err.message || `Erreur HTTP ${response.status}`);
+        }
+      } else {
+        throw new Error(`Erreur lors de la mise à jour (HTTP ${response.status})`);
+      }
     }
   },
 
@@ -88,8 +105,23 @@ export const pb = {
       body: JSON.stringify({ player })
     });
     if (!response.ok) {
-      const err = await response.json();
-      throw new Error(err.error || "Impossible de rejoindre le salon.");
+      const isJson = response.headers.get("content-type")?.includes("application/json");
+      if (isJson) {
+        try {
+          const err = await response.json();
+          throw new Error(err.error || "Impossible de rejoindre le salon.");
+        } catch (e: any) {
+          throw new Error(`Erreur API (${response.status})`);
+        }
+      } else {
+        const textStr = await response.text();
+        const snippet = textStr.substring(0, 100).replace(/<[^>]*>/g, "").trim();
+        throw new Error(`Impossible de rejoindre le salon (HTTP ${response.status}). Détail: ${snippet || 'Service injoignable'}`);
+      }
+    }
+    const isJson = response.headers.get("content-type")?.includes("application/json");
+    if (!isJson) {
+      throw new Error("Le serveur a renvoyé un format de réponse invalide.");
     }
     const data = await response.json();
     return data.state;
