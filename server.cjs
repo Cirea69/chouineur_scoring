@@ -102,9 +102,12 @@ app.post("/api/rooms/:code/join", (req, res) => {
 });
 app.get("/api/rooms/:code/stream", (req, res) => {
   const code = req.params.code.toUpperCase();
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("Connection", "keep-alive");
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache, no-transform",
+    "Connection": "keep-alive",
+    "X-Accel-Buffering": "no"
+  });
   res.flushHeaders();
   if (!clients[code]) {
     clients[code] = [];
@@ -116,7 +119,15 @@ app.get("/api/rooms/:code/stream", (req, res) => {
 
 `);
   }
+  const pingInterval = setInterval(() => {
+    try {
+      res.write(": ping\n\n");
+    } catch (e) {
+      clearInterval(pingInterval);
+    }
+  }, 15e3);
   req.on("close", () => {
+    clearInterval(pingInterval);
     clients[code] = (clients[code] || []).filter((client) => client !== res);
   });
 });
