@@ -28,6 +28,22 @@ var import_vite = require("vite");
 var app = (0, import_express.default)();
 var PORT = 3e3;
 app.use(import_express.default.json());
+app.use((req, res, next) => {
+  console.log(`[API REQUEST] ${req.method} ${req.url}`);
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+  next();
+});
+app.use((err, req, res, next) => {
+  console.error("[SERVER Error]", err);
+  res.status(err.status || 500).json({
+    error: err.message || "Une erreur interne du serveur est survenue."
+  });
+});
 var rooms = {};
 var clients = {};
 function broadcastToRoom(code, data) {
