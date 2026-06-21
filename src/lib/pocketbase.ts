@@ -55,7 +55,12 @@ export const pb = {
       })
     });
     if (!response.ok) {
-      throw new Error("Erreur lors de la création du salon.");
+      try {
+        const errorBody = await response.json();
+        throw new Error(errorBody.error || `Erreur serveur (${response.status})`);
+      } catch (err: any) {
+        throw new Error(err.message || `Erreur HTTP (${response.status})`);
+      }
     }
   },
 

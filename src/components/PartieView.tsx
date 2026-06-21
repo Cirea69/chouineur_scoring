@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CheckCircle, Frown, Sparkles, Info, Plus, Minus, ChevronDown, ChevronUp, Trophy, HelpCircle } from "lucide-react";
 import { Player } from "../types";
 import { PARI_CARDS, checkPariMatch, getPlayerColorPreset } from "../constants";
@@ -103,6 +103,37 @@ export default function PartieView({
     });
     return initial;
   });
+
+  // Déclencher la réinitialisation automatique en cas de nouvelle partie ou de changement de manche
+  const resetTrigger = `${mancheActuelle}_${players.map((p) => `${p.id}:${p.scoreActuel}:${(p.scoresParManche || []).length}`).join(",")}`;
+
+  useEffect(() => {
+    const resetPari: { [playerId: string]: string } = {};
+    const resetPlis: { [playerId: string]: number } = {};
+    const resetFlipping: { [playerId: string]: number } = {};
+    const resetPoints: { [playerId: string]: number } = {};
+
+    players.forEach((p, idx) => {
+      resetPari[p.id] = getFirstAvailableCard(p);
+      
+      // Configuration par défaut intelligente des plis
+      if (players.length === 3) {
+        resetPlis[p.id] = idx === 0 ? 2 : idx === 1 ? 3 : 2;
+      } else if (players.length === 4) {
+        resetPlis[p.id] = idx === 0 ? 2 : idx === 1 ? 2 : idx === 2 ? 2 : 1;
+      } else {
+        resetPlis[p.id] = 1;
+      }
+
+      resetFlipping[p.id] = 0;
+      resetPoints[p.id] = 0;
+    });
+
+    setSelectedPari(resetPari);
+    setPlisCount(resetPlis);
+    setActiveFlippingChouines(resetFlipping);
+    setActivePointsChouines(resetPoints);
+  }, [resetTrigger]);
 
   const togglePlayerExpanded = (playerId: string) => {
     setExpandedPlayers((prev) => ({

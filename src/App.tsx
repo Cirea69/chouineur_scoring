@@ -267,7 +267,11 @@ export default function App() {
 
   // Host a room
   const handleCreateOnlineRoom = async () => {
-    const code = Math.random().toString(36).substring(2, 6).toUpperCase(); // e.g. "XRTZ"
+    const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    let code = "";
+    for (let i = 0; i < 4; i++) {
+      code += alphabet.charAt(Math.floor(Math.random() * alphabet.length));
+    }
     try {
       await pb.createRoom(code, {
         players,
