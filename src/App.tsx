@@ -608,7 +608,18 @@ export default function App() {
   };
 
   const handleResetAll = () => {
-    setPlayers(DEFAULT_PLAYERS);
+    const cleanPlayers = DEFAULT_PLAYERS.map((p) => ({
+      ...p,
+      scoreActuel: 0,
+      scoresParManche: [],
+      chouinages: 0,
+      chouinagesParManche: [],
+      chouinesPointsParManche: [],
+      plisParManche: [],
+      parisParManche: [],
+      parissValides: []
+    }));
+    setPlayers(cleanPlayers);
     setMancheActuelle(1);
     setGameStatus("saisie");
     setHistorique([]);
