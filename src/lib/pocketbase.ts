@@ -24,9 +24,22 @@ export interface GameState {
   hostId: string;
 }
 
-// In AI Studio / Cloud Run, PocketBase is typically reverse proxied on the same origin / port or via VITE_POCKETBASE_URL
-const pbUrl = (import.meta as any).env?.VITE_POCKETBASE_URL || window.location.origin;
-export const client = new PocketBase(pbUrl);
+// In AI Studio / Cloud Run, PocketBase is typically reverse proxied on the same origin / port or via VITE_POCKETBASE_URL.
+// We use the pocketbase.cireaserveur.familyds.com server domain provided by the user as the default fallback.
+export const getPocketBaseUrl = (): string => {
+  return localStorage.getItem("pocketbase_url") || (import.meta as any).env?.VITE_POCKETBASE_URL || "https://pocketbase.cireaserveur.familyds.com";
+};
+
+export const setPocketBaseUrl = (url: string): void => {
+  let cleanedUrl = url.trim();
+  if (cleanedUrl && !cleanedUrl.startsWith("http://") && !cleanedUrl.startsWith("https://")) {
+    cleanedUrl = "https://" + cleanedUrl;
+  }
+  localStorage.setItem("pocketbase_url", cleanedUrl);
+  client.baseUrl = cleanedUrl;
+};
+
+export const client = new PocketBase(getPocketBaseUrl());
 
 export const pb = {
   /**
