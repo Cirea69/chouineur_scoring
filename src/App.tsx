@@ -187,6 +187,10 @@ export default function App() {
     return newId;
   });
 
+  const [isSpectator, setIsSpectator] = useState<boolean>(() => {
+    return localStorage.getItem("chouine_is_spectator") === "true";
+  });
+
   // Progressive Web App (PWA) installation state management
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isStandalone, setIsStandalone] = useState<boolean>(() => {
@@ -243,6 +247,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem("chouine_is_gm", isGM ? "true" : "false");
   }, [isGM]);
+
+  useEffect(() => {
+    localStorage.setItem("chouine_is_spectator", isSpectator ? "true" : "false");
+  }, [isSpectator]);
 
   useEffect(() => {
     if (roomCode) {
@@ -310,6 +318,20 @@ export default function App() {
       setIsGM(false);
       setRoomCode(cleanCode);
       setMultiplayerMode("multiplayer");
+
+      const isSpectatorOnly = !!(serverState as any).isSpectatorOnly;
+      setIsSpectator(isSpectatorOnly);
+
+      if (isSpectatorOnly) {
+        const reason = (serverState as any).spectatorReason;
+        if (reason === "game_in_progress") {
+          alert("La partie de Chouine a déjà démarré ! Vous rejoignez le salon en tant que SPECTATEUR.");
+        } else {
+          alert("Le salon est complet (max 5 joueurs) ! Vous rejoignez le salon en tant que SPECTATEUR.");
+        }
+      } else {
+        alert(`Vous avez rejoint le salon ${cleanCode} avec succès !`);
+      }
       
       // Seed initial local status
       setPlayers(serverState.players);
@@ -317,7 +339,6 @@ export default function App() {
       setGameStatus(serverState.gameStatus);
       setCurrentTab(serverState.currentTab);
       
-      alert(`Vous avez rejoint le salon ${cleanCode} avec succès !`);
     } catch (err: any) {
       alert(err.message || "Impossible de rejoindre le salon.");
     }
@@ -327,8 +348,9 @@ export default function App() {
     setMultiplayerMode("local");
     setRoomCode(null);
     setIsGM(true);
+    setIsSpectator(false);
     setPlayers(DEFAULT_PLAYERS);
-    setMancheActuelle(1);
+    setMancheActuelle(2); // Match Chouine maquette default starting round (Manche 2)
     setGameStatus("saisie");
     setCurrentTab("players");
     alert("Déconnecté du salon multijoueur. Roster local restauré.");
@@ -355,21 +377,57 @@ export default function App() {
     }
   }, [multiplayerMode, isGM, roomCode, players, mancheActuelle, gameStatus, currentTab, clientId]);
 
-  // Effet Player (Lecture & Abonnement temps réel)
+  // Effet de synchronisation temps réel unifié (Spectateurs & Joueurs)
   useEffect(() => {
-    if (multiplayerMode === "multiplayer" && !isGM && roomCode) {
+    if (multiplayerMode === "multiplayer" && roomCode) {
       const unsubscribe = pb.onSnapshot(roomCode, (serverState) => {
-        if (serverState.players) {
-          setPlayers(serverState.players);
-        }
-        if (serverState.mancheActuelle) {
-          setMancheActuelle(serverState.mancheActuelle);
-        }
-        if (serverState.gameStatus) {
-          setGameStatus(serverState.gameStatus);
-        }
-        if (serverState.currentTab !== undefined) {
-          setCurrentTab(serverState.currentTab);
+        if (!isGM) {
+          // Guests & Spectators always sync everything from the server
+          if (serverState.players) {
+            setPlayers(serverState.players);
+          }
+          if (serverState.mancheActuelle) {
+            setMancheActuelle(serverState.mancheActuelle);
+          }
+          if (serverState.gameStatus) {
+            setGameStatus(serverState.gameStatus);
+          }
+          if (serverState.currentTab !== undefined) {
+            setCurrentTab(serverState.currentTab);
+          }
+          // Dynamic auto-detect of spectator state
+          const amInPlayers = serverState.players?.some((p: any) => p.id === clientId);
+          setIsSpectator(!amInPlayers);
+        } else {
+          // GM (Host) is the owner of game progress (rounds, tabs, statuses).
+          // But GM needs to see newly connected players who join!
+          if (serverState.players) {
+            const localIds = players.map(p => p.id);
+            const serverIds = serverState.players.map(p => p.id);
+            
+            // Check if there are players on the server that are not in local list, or if the counts differ
+            const hasNewPlayers = serverState.players.some(sp => !localIds.includes(sp.id));
+            const hasRemovedPlayers = localIds.some(lid => !serverIds.includes(lid));
+            
+            if (hasNewPlayers || hasRemovedPlayers || localIds.length !== serverIds.length) {
+              setPlayers(serverState.players);
+            } else {
+              // If the IDs are identical, maybe a connected guest updated their avatar/name/color
+              const updated = players.map(lp => {
+                const sp = serverState.players.find(p => p.id === lp.id);
+                // Keep local modifications on the GM's own player entry, but pull fresh names of guests!
+                if (sp && lp.id !== clientId) {
+                  if (sp.name !== lp.name || sp.avatar !== lp.avatar || sp.color !== lp.color) {
+                    return { ...lp, name: sp.name, avatar: sp.avatar, color: sp.color };
+                  }
+                }
+                return lp;
+              });
+              if (JSON.stringify(players) !== JSON.stringify(updated)) {
+                setPlayers(updated);
+              }
+            }
+          }
         }
       });
 
@@ -377,7 +435,7 @@ export default function App() {
         unsubscribe();
       };
     }
-  }, [multiplayerMode, isGM, roomCode]);
+  }, [multiplayerMode, isGM, roomCode, players, clientId]);
 
   // Synchroniser le thème avec la balise racine HTML et le body
   useEffect(() => {
@@ -618,6 +676,7 @@ export default function App() {
             onUpdatePlayers={setPlayers}
             onStartGame={handleStartGame}
             isGM={isGM}
+            isSpectator={isSpectator}
             multiplayerMode={multiplayerMode}
             onCreateOnlineRoom={handleCreateOnlineRoom}
             onJoinOnlineRoom={handleJoinOnlineRoom}

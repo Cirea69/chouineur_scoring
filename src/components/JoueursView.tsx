@@ -10,6 +10,7 @@ interface JoueursViewProps {
   onUpdatePlayers: (players: Player[]) => void;
   onStartGame: () => void;
   isGM?: boolean;
+  isSpectator?: boolean;
   multiplayerMode?: string;
   onCreateOnlineRoom?: () => void;
   onJoinOnlineRoom?: (code: string, name: string) => void;
@@ -38,6 +39,7 @@ export default function JoueursView({
   onUpdatePlayers,
   onStartGame,
   isGM = true,
+  isSpectator = false,
   multiplayerMode = "local",
   onCreateOnlineRoom,
   onJoinOnlineRoom,
@@ -165,10 +167,19 @@ export default function JoueursView({
               <div className="text-left sm:text-right">
                 <span className="text-[10px] text-on-surface-variant font-bold uppercase block">Votre Rôle</span>
                 <span className="text-xs font-black text-secondary dark:text-secondary-fixed-dim uppercase">
-                  {isGM ? "👑 Maître du Jeu (GM)" : "👁️ Joueur (Spectateur)"}
+                  {isGM ? "👑 Maître du Jeu (GM)" : isSpectator ? "👁️ Observateur (Spectateur)" : "👁️ Joueur (Spectateur)"}
                 </span>
               </div>
             </div>
+
+            {isSpectator && (
+              <div className="bg-amber-500/10 border border-amber-500/20 text-amber-950 dark:text-amber-300 text-[11px] p-3 rounded-lg leading-relaxed font-semibold flex items-start gap-2">
+                <span className="text-sm">ℹ️</span>
+                <span>
+                  Vous êtes connecté en tant que <strong>Spectateur Seul / Observateur</strong> car la partie a déjà démarré ou le salon de 5 joueurs est complet. Vous pouvez suivre l'évolution de la partie en temps réel !
+                </span>
+              </div>
+            )}
 
             <button
               onClick={onDisconnectRoom}

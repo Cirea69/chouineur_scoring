@@ -114,8 +114,18 @@ export const pb = {
       
       const exists = state.players.some((p: any) => p.id === player.id);
       if (!exists) {
-        state.players.push(player);
-        await client.collection('rooms_chouineur').update(record.id, { state });
+        // Validation logic for guests joining
+        const isGameInProgress = (state.mancheActuelle && state.mancheActuelle > 1) || state.currentTab !== "players";
+        const isLobbyFull = state.players.length >= 5;
+
+        if (isGameInProgress || isLobbyFull) {
+          // If the game has started or lobby is full, connect as spectator
+          (state as any).isSpectatorOnly = true;
+          (state as any).spectatorReason = isGameInProgress ? "game_in_progress" : "lobby_full";
+        } else {
+          state.players.push(player);
+          await client.collection('rooms_chouineur').update(record.id, { state });
+        }
       }
       return state;
     } catch (err: any) {
