@@ -57,10 +57,6 @@ export default function JoueursView({
     return p.id === clientId;
   };
 
-  const [joinCode, setJoinCode] = useState("");
-  const [joinName, setJoinName] = useState("");
-  const [showJoinForm, setShowJoinForm] = useState(false);
-  
   const [avatarPickerState, setAvatarPickerState] = useState<{
     isOpen: boolean;
     playerId: string | null;
@@ -160,119 +156,6 @@ export default function JoueursView({
 
   return (
     <div className="w-full max-w-xl mx-auto pb-32">
-      {/* 🌐 PANNEAU MULTIJOUEUR EN TEMPS RÉEL (POCKETBASE) */}
-      <div className="mb-8 hand-drawn-border bg-surface-container-low dark:bg-stone-900/20 p-5 rounded-2xl shadow relative z-30">
-        <h3 className="font-headline-sm text-xs sm:text-sm text-primary dark:text-primary-fixed-dim uppercase tracking-wider font-extrabold flex items-center gap-2 mb-3">
-          <Users className="w-4 h-4 text-secondary" />
-          Salon Multijoueur en temps réel
-        </h3>
-
-        {multiplayerMode === "multiplayer" ? (
-          <div className="space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-primary/5 p-3 rounded-lg border border-primary/25">
-              <div>
-                <span className="text-[10px] text-on-surface-variant font-bold uppercase block">Salon Actif</span>
-                <span className="font-mono text-lg font-black text-primary tracking-widest">{roomCode}</span>
-              </div>
-              <div className="text-left sm:text-right">
-                <span className="text-[10px] text-on-surface-variant font-bold uppercase block">Votre Rôle</span>
-                <span className="text-xs font-black text-secondary dark:text-secondary-fixed-dim uppercase">
-                  {isGM ? "👑 Maître du Jeu (GM)" : isSpectator ? "👁️ Observateur (Spectateur)" : "👁️ Joueur (Spectateur)"}
-                </span>
-              </div>
-            </div>
-
-            {isSpectator && (
-              <div className="bg-amber-500/10 border border-amber-500/20 text-amber-950 dark:text-amber-300 text-[11px] p-3 rounded-lg leading-relaxed font-semibold flex items-start gap-2">
-                <span className="text-sm">ℹ️</span>
-                <span>
-                  Vous êtes connecté en tant que <strong>Spectateur Seul / Observateur</strong> car la partie a déjà démarré ou le salon de 5 joueurs est complet. Vous pouvez suivre l'évolution de la partie en temps réel !
-                </span>
-              </div>
-            )}
-
-            <button
-              onClick={onDisconnectRoom}
-              className="w-full py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold font-sans rounded-lg transition-all border-b-2 border-black cursor-pointer"
-            >
-              Déconnexion du Salon
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <p className="text-[11px] text-on-surface-variant font-medium leading-relaxed">
-              Jouez sur plusieurs appareils synchronisés en temps réel ! Un joueur héberge la partie (GM), et les autres rejoignent avec son code à 4 lettres.
-            </p>
-
-            {!showJoinForm ? (
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={onCreateOnlineRoom}
-                  className="py-2.5 px-4 bg-primary text-on-primary hover:opacity-95 font-sans font-bold text-xs rounded-lg transition-all border-b-2 border-black flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  Créer un Salon
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowJoinForm(true)}
-                  className="py-2.5 px-4 bg-surface-container-high text-on-surface hover:bg-surface-container-highest font-sans font-bold text-xs rounded-lg transition-all border-b-2 border-outline flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <Users className="w-4 h-4" />
-                  Rejoindre un Salon
-                </button>
-              </div>
-            ) : (
-              <div
-                className="space-y-3 bg-surface-bright dark:bg-stone-900/10 p-3 rounded-lg border border-outline-variant"
-              >
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-[9px] font-bold text-on-surface-variant block uppercase mb-1">Code du Salon</label>
-                    <input
-                      type="text"
-                      maxLength={4}
-                      value={joinCode}
-                      onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                      placeholder="XRTZ"
-                      className="w-full bg-surface-container-low border border-outline rounded p-2 text-center font-mono font-black uppercase tracking-widest text-sm focus:outline-none focus:border-primary text-on-surface"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[9px] font-bold text-on-surface-variant block uppercase mb-1">Votre Nom / Pseudo</label>
-                    <input
-                      type="text"
-                      maxLength={14}
-                      value={joinName}
-                      onChange={(e) => setJoinName(e.target.value)}
-                      placeholder="Gaston"
-                      className="w-full bg-surface-container-low border border-outline rounded p-2 text-sm focus:outline-none focus:border-primary text-on-surface font-semibold"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3.5 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => setShowJoinForm(false)}
-                    className="py-2 text-xs font-bold rounded bg-surface-container text-on-surface hover:bg-surface-container-high cursor-pointer"
-                  >
-                    Annuler
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onJoinOnlineRoom && onJoinOnlineRoom(joinCode, joinName)}
-                    className="py-2 text-xs font-bold rounded bg-primary text-on-primary hover:opacity-95 cursor-pointer"
-                  >
-                    Confirmer & Rejoindre
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
 
       {/* Visual background illustrations overlays */}
       <span className="material-symbols-outlined absolute top-4 -left-4 text-tertiary/10 dark:text-primary-fixed-dim/5 -rotate-12 scale-150 select-none pointer-events-none">

@@ -20,7 +20,7 @@ export interface GameState {
   players: PlayerState[];
   mancheActuelle: number;
   gameStatus: "saisie" | "termine";
-  currentTab: "players" | "game" | "scores";
+  currentTab: "players" | "lobby" | "game" | "scores";
   hostId: string;
   updatedAt?: number;
 }

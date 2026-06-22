@@ -3,6 +3,7 @@ import { Player, Game, HistoriquePartie, Theme } from "./types";
 import TopAppBar from "./components/TopAppBar";
 import BottomNavBar from "./components/BottomNavBar";
 import JoueursView from "./components/JoueursView";
+import SalonView from "./components/SalonView";
 import PartieView from "./components/PartieView";
 import ScoresView from "./components/ScoresView";
 import SettingsDialog from "./components/SettingsDialog";
@@ -159,9 +160,9 @@ export default function App() {
   });
 
   // 5. Interface UI active et dialogs
-  const [currentTab, setCurrentTab] = useState<"players" | "game" | "scores">("players");
+  const [currentTab, setCurrentTab] = useState<"players" | "lobby" | "game" | "scores">("players");
 
-  const handleTabChange = (tab: "players" | "game" | "scores") => {
+  const handleTabChange = (tab: "players" | "lobby" | "game" | "scores") => {
     if (tab === "game" || tab === "scores") {
       if (players.length < 3) {
         alert("La Chouine se joue à 3 joueurs minimum. Veuillez configurer au moins 3 joueurs !");
@@ -413,7 +414,7 @@ export default function App() {
         } catch (err) {
           console.error("Échec de la synchronisation GM vers le serveur:", err);
         }
-      }, 250);
+      }, 80);
 
       return () => clearTimeout(delayDebounce);
     }
@@ -438,7 +439,7 @@ export default function App() {
           } catch (err) {
             console.error("Échec de la synchronisation Invité vers le serveur:", err);
           }
-        }, 150);
+        }, 50);
 
         return () => clearTimeout(delayDebounce);
       }
@@ -479,26 +480,31 @@ export default function App() {
             const localIds = currentPlayers.map(p => p.id);
             const serverIds = serverState.players.map(p => p.id);
             
-            // Check if there are players on the server that are not in local list, or if the counts differ
-            const hasNewPlayers = serverState.players.some(sp => !localIds.includes(sp.id));
-            const hasRemovedPlayers = localIds.some(lid => !serverIds.includes(lid));
+            // Si le MJ vient de modifier localement l'effectif, on ne recharge pas immédiatement les anciennes données du serveur
+            const isJustEditedLocally = (Date.now() - lastLocalUpdateTimeRef.current < 1500);
             
-            if (hasNewPlayers || hasRemovedPlayers || localIds.length !== serverIds.length) {
-              setPlayers(serverState.players);
-            } else {
-              // If the IDs are identical, maybe a connected guest updated their avatar/name/color
-              const updated = currentPlayers.map(lp => {
-                const sp = serverState.players.find(p => p.id === lp.id);
-                // Keep local modifications on the GM's own player entry, but pull fresh names of guests!
-                if (sp && lp.id !== clientId) {
-                  if (sp.name !== lp.name || sp.avatar !== lp.avatar || sp.color !== lp.color || sp.subtitle !== lp.subtitle) {
-                    return { ...lp, name: sp.name, avatar: sp.avatar, color: sp.color, subtitle: sp.subtitle };
+            if (!isJustEditedLocally) {
+              // Check if there are players on the server that are not in local list, or if the counts differ
+              const hasNewPlayers = serverState.players.some(sp => !localIds.includes(sp.id));
+              const hasRemovedPlayers = localIds.some(lid => !serverIds.includes(lid));
+              
+              if (hasNewPlayers || hasRemovedPlayers || localIds.length !== serverIds.length) {
+                setPlayers(serverState.players);
+              } else {
+                // If the IDs are identical, maybe a connected guest updated their avatar/name/color
+                const updated = currentPlayers.map(lp => {
+                  const sp = serverState.players.find(p => p.id === lp.id);
+                  // Keep local modifications on the GM's own player entry, but pull fresh names of guests!
+                  if (sp && lp.id !== clientId) {
+                    if (sp.name !== lp.name || sp.avatar !== lp.avatar || sp.color !== lp.color || sp.subtitle !== lp.subtitle) {
+                      return { ...lp, name: sp.name, avatar: sp.avatar, color: sp.color, subtitle: sp.subtitle };
+                    }
                   }
+                  return lp;
+                });
+                if (JSON.stringify(currentPlayers) !== JSON.stringify(updated)) {
+                  setPlayers(updated);
                 }
-                return lp;
-              });
-              if (JSON.stringify(currentPlayers) !== JSON.stringify(updated)) {
-                setPlayers(updated);
               }
             }
           }
@@ -769,11 +775,26 @@ export default function App() {
             isGM={isGM}
             isSpectator={isSpectator}
             multiplayerMode={multiplayerMode}
+            onDisconnectRoom={handleDisconnectRoom}
+            roomCode={roomCode}
+            clientId={clientId}
+          />
+        )}
+
+        {currentTab === "lobby" && (
+          <SalonView
+            players={players}
+            onUpdatePlayers={handleUpdatePlayers}
+            isGM={isGM}
+            isSpectator={isSpectator}
+            multiplayerMode={multiplayerMode}
+            onUpdateMultiplayerMode={setMultiplayerMode}
             onCreateOnlineRoom={handleCreateOnlineRoom}
             onJoinOnlineRoom={handleJoinOnlineRoom}
             onDisconnectRoom={handleDisconnectRoom}
             roomCode={roomCode}
             clientId={clientId}
+            onStartGame={handleStartGame}
           />
         )}
 
