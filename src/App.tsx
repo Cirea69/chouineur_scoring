@@ -117,6 +117,11 @@ export default function App() {
     lastLocalUpdateTimeRef.current = Date.now();
   };
 
+  const playersRef = useRef<Player[]>(players);
+  useEffect(() => {
+    playersRef.current = players;
+  }, [players]);
+
   // 3. Initialiser les paramètres de jeu (fixé à 4 manches selon les règles de Chouine)
   const [maxRounds] = useState<number>(4);
 
@@ -408,7 +413,7 @@ export default function App() {
         } catch (err) {
           console.error("Échec de la synchronisation GM vers le serveur:", err);
         }
-      }, 1200);
+      }, 250);
 
       return () => clearTimeout(delayDebounce);
     }
@@ -433,7 +438,7 @@ export default function App() {
           } catch (err) {
             console.error("Échec de la synchronisation Invité vers le serveur:", err);
           }
-        }, 800);
+        }, 150);
 
         return () => clearTimeout(delayDebounce);
       }
@@ -470,7 +475,8 @@ export default function App() {
           // GM (Host) is the owner of game progress (rounds, tabs, statuses).
           // But GM needs to see newly connected players who join!
           if (serverState.players) {
-            const localIds = players.map(p => p.id);
+            const currentPlayers = playersRef.current;
+            const localIds = currentPlayers.map(p => p.id);
             const serverIds = serverState.players.map(p => p.id);
             
             // Check if there are players on the server that are not in local list, or if the counts differ
@@ -481,7 +487,7 @@ export default function App() {
               setPlayers(serverState.players);
             } else {
               // If the IDs are identical, maybe a connected guest updated their avatar/name/color
-              const updated = players.map(lp => {
+              const updated = currentPlayers.map(lp => {
                 const sp = serverState.players.find(p => p.id === lp.id);
                 // Keep local modifications on the GM's own player entry, but pull fresh names of guests!
                 if (sp && lp.id !== clientId) {
@@ -491,7 +497,7 @@ export default function App() {
                 }
                 return lp;
               });
-              if (JSON.stringify(players) !== JSON.stringify(updated)) {
+              if (JSON.stringify(currentPlayers) !== JSON.stringify(updated)) {
                 setPlayers(updated);
               }
             }
@@ -503,7 +509,7 @@ export default function App() {
         unsubscribe();
       };
     }
-  }, [multiplayerMode, isGM, roomCode, players, clientId]);
+  }, [multiplayerMode, isGM, roomCode, clientId]);
 
   // Synchroniser le thème avec la balise racine HTML et le body
   useEffect(() => {
