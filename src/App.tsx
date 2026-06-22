@@ -302,6 +302,38 @@ export default function App() {
     }
   };
 
+  const handleUpdateMultiplayerModeWithSideEffects = async (mode: "local" | "simulated" | "multiplayer") => {
+    setMultiplayerMode(mode);
+    
+    if (mode === "local" || mode === "simulated") {
+      setCurrentTab("players");
+    } else if (mode === "multiplayer") {
+      setCurrentTab("lobby");
+      
+      if (!roomCode) {
+        const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        let code = "";
+        for (let i = 0; i < 4; i++) {
+          code += alphabet.charAt(Math.floor(Math.random() * alphabet.length));
+        }
+        try {
+          await pb.createRoom(code, {
+            players,
+            mancheActuelle,
+            gameStatus,
+            currentTab: "lobby",
+            hostId: clientId,
+          });
+          setIsGM(true);
+          setRoomCode(code);
+          alert(`Salon ${code} créé automatiquement ! Vous pouvez inviter des joueurs avec ce code.`);
+        } catch (err: any) {
+          alert("Échec de la création automatique du salon en ligne : " + err.message);
+        }
+      }
+    }
+  };
+
   // Join an existing room
   const handleJoinOnlineRoom = async (code: string, playerName: string) => {
     const cleanCode = code.trim().toUpperCase();
@@ -758,7 +790,7 @@ export default function App() {
         toggleTheme={toggleTheme}
         openSettings={() => setSettingsOpen(true)}
         multiplayerMode={multiplayerMode}
-        onUpdateMultiplayerMode={setMultiplayerMode}
+        onUpdateMultiplayerMode={handleUpdateMultiplayerModeWithSideEffects}
         onInstallClick={handleInstallClick}
         isStandalone={isStandalone}
         roomCode={roomCode}
@@ -788,7 +820,7 @@ export default function App() {
             isGM={isGM}
             isSpectator={isSpectator}
             multiplayerMode={multiplayerMode}
-            onUpdateMultiplayerMode={setMultiplayerMode}
+            onUpdateMultiplayerMode={handleUpdateMultiplayerModeWithSideEffects}
             onCreateOnlineRoom={handleCreateOnlineRoom}
             onJoinOnlineRoom={handleJoinOnlineRoom}
             onDisconnectRoom={handleDisconnectRoom}
@@ -832,7 +864,7 @@ export default function App() {
         maxRounds={maxRounds}
         onUpdateMaxRounds={() => {}}
         multiplayerMode={multiplayerMode}
-        onUpdateMultiplayerMode={setMultiplayerMode}
+        onUpdateMultiplayerMode={handleUpdateMultiplayerModeWithSideEffects}
         onResetAll={handleResetAll}
         onSimulateLobbyPlayers={handleSimulateLobbyPlayers}
       />
