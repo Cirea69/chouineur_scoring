@@ -116,7 +116,7 @@ export const pb = {
       const exists = state.players.some((p: any) => p.id === player.id);
       if (!exists) {
         // Validation logic for guests joining
-        const isGameInProgress = (state.mancheActuelle && state.mancheActuelle > 1) || state.currentTab !== "players";
+        const isGameInProgress = state.currentTab !== "players";
         const isLobbyFull = state.players.length >= 5;
 
         if (isGameInProgress || isLobbyFull) {
@@ -131,6 +131,25 @@ export const pb = {
       return state;
     } catch (err: any) {
       throw new Error(`Impossible de rejoindre le salon : ${err.message || err}`);
+    }
+  },
+
+  /**
+   * Update a specific player's profile details within the room.
+   */
+  updatePlayerInRoom: async (code: string, playerId: string, updatedFields: Partial<PlayerState>): Promise<GameState> => {
+    const formattedCode = code.toUpperCase();
+    try {
+      const record = await client.collection('rooms_chouineur').getFirstListItem(`code="${formattedCode}"`);
+      const state = record.state as GameState;
+      if (state.players) {
+        state.players = state.players.map((p: any) => p.id === playerId ? { ...p, ...updatedFields } : p);
+        state.updatedAt = Date.now();
+        await client.collection('rooms_chouineur').update(record.id, { state });
+      }
+      return state;
+    } catch (err: any) {
+      throw new Error(`Échec de la mise à jour du joueur (PocketBase) : ${err.message || err}`);
     }
   },
 

@@ -421,14 +421,15 @@ export default function App() {
       if (now - lastLocalUpdateTimeRef.current < 5000) {
         const delayDebounce = setTimeout(async () => {
           try {
-            await pb.saveRoomState(roomCode, {
-              players,
-              mancheActuelle,
-              gameStatus,
-              currentTab,
-              hostId: "", // non-host
-              updatedAt: lastLocalUpdateTimeRef.current,
-            });
+            const myPlayer = players.find((p) => p.id === clientId);
+            if (myPlayer) {
+              await pb.updatePlayerInRoom(roomCode, clientId, {
+                name: myPlayer.name,
+                avatar: myPlayer.avatar,
+                color: myPlayer.color,
+                subtitle: myPlayer.subtitle,
+              });
+            }
           } catch (err) {
             console.error("Échec de la synchronisation Invité vers le serveur:", err);
           }
