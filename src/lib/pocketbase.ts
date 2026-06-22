@@ -116,7 +116,7 @@ export const pb = {
       const exists = state.players.some((p: any) => p.id === player.id);
       if (!exists) {
         // Validation logic for guests joining
-        const isGameInProgress = state.currentTab !== "players";
+        const isGameInProgress = state.currentTab === "game" || state.currentTab === "scores";
         const isLobbyFull = state.players.length >= 5;
 
         if (isGameInProgress || isLobbyFull) {
