@@ -309,28 +309,6 @@ export default function App() {
       setCurrentTab("players");
     } else if (mode === "multiplayer") {
       setCurrentTab("lobby");
-      
-      if (!roomCode) {
-        const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        let code = "";
-        for (let i = 0; i < 4; i++) {
-          code += alphabet.charAt(Math.floor(Math.random() * alphabet.length));
-        }
-        try {
-          await pb.createRoom(code, {
-            players,
-            mancheActuelle,
-            gameStatus,
-            currentTab: "lobby",
-            hostId: clientId,
-          });
-          setIsGM(true);
-          setRoomCode(code);
-          alert(`Salon ${code} créé automatiquement ! Vous pouvez inviter des joueurs avec ce code.`);
-        } catch (err: any) {
-          alert("Échec de la création automatique du salon en ligne : " + err.message);
-        }
-      }
     }
   };
 
