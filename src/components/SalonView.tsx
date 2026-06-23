@@ -113,11 +113,11 @@ export default function SalonView({
             }}
             className={`p-3 rounded-xl border-2 text-left flex items-start gap-3 transition-all duration-200 cursor-pointer ${
               multiplayerMode === "local"
-                ? "border-primary bg-primary/5 text-primary dark:border-primary-fixed-dim"
+                ? "border-primary bg-primary/10 text-[#531302] dark:border-primary-fixed-dim dark:text-primary-fixed-dim dark:bg-primary/20"
                 : "border-outline-variant hover:bg-black/5 dark:hover:bg-white/5 text-on-surface"
             }`}
           >
-            <Laptop className="w-5 h-5 text-secondary shrink-0 mt-0.5" />
+            <Laptop className="w-5 h-5 text-primary shrink-0 mt-0.5" />
             <div>
               <p className="font-black text-sm">Pass-and-Play Local</p>
               <p className="text-[10px] text-on-surface-variant/90 leading-tight mt-0.5">Un seul appareil pour tout le monde.</p>
@@ -136,13 +136,13 @@ export default function SalonView({
                 onUpdateMultiplayerMode("simulated");
               }
             }}
-            className={`p-3 rounded-xl border-2 text-left flex items-start gap-3 transition-all duration-200 cursor-pointer ${
+            className={`p-3 rounded-xl border-2 border-dashed text-left flex items-start gap-3 transition-all duration-200 cursor-pointer ${
               multiplayerMode === "simulated"
-                ? "border-[#9c27b0] bg-purple-550/5 text-[#9c27b0] dark:border-[#ea80fc] dark:text-[#ea80fc]"
+                ? "border-primary bg-primary/10 text-[#531302] dark:border-primary-fixed-dim dark:text-primary-fixed-dim dark:bg-primary/20"
                 : "border-outline-variant hover:bg-black/5 dark:hover:bg-white/5 text-on-surface"
             }`}
           >
-            <Smartphone className="w-5 h-5 text-purple-550 dark:text-[#ea80fc] shrink-0 mt-0.5 animate-pulse" />
+            <Smartphone className="w-5 h-5 text-primary shrink-0 mt-0.5 animate-pulse" />
             <div>
               <p className="font-black text-sm">Simulateur d'IA</p>
               <p className="text-[10px] text-on-surface-variant/90 leading-tight mt-0.5">S'entraîner avec des Chouineurs virtuels.</p>
@@ -154,11 +154,11 @@ export default function SalonView({
             onClick={() => onUpdateMultiplayerMode("multiplayer")}
             className={`p-3 rounded-xl border-2 text-left flex items-start gap-3 transition-all duration-200 cursor-pointer ${
               multiplayerMode === "multiplayer"
-                ? "border-green-600 bg-green-600/5 text-green-700 dark:border-green-400 dark:text-green-400"
+                ? "border-secondary bg-secondary/10 text-[#04322b] dark:border-secondary dark:text-secondary-fixed-dim dark:bg-secondary/20"
                 : "border-outline-variant hover:bg-black/5 dark:hover:bg-white/5 text-on-surface"
             }`}
           >
-            <Wifi className="w-5 h-5 text-green-500 shrink-0 mt-0.5" />
+            <Wifi className="w-5 h-5 text-secondary shrink-0 mt-0.5" />
             <div>
               <p className="font-black text-sm">Multijoueur Réel</p>
               <p className="text-[10px] text-on-surface-variant/90 leading-tight mt-0.5">Jouer en direct avec plusieurs téléphones !</p>
@@ -172,7 +172,7 @@ export default function SalonView({
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="hand-drawn-border bg-white dark:bg-zinc-900 p-8 rounded-2xl text-center space-y-4"
+          className="hand-drawn-border bg-surface dark:bg-zinc-900 p-8 rounded-2xl text-center space-y-4"
         >
           <div className="w-16 h-16 bg-primary/10 dark:bg-primary-fixed-dim/10 rounded-full flex items-center justify-center mx-auto text-primary animate-pulse">
             <Wifi className="w-8 h-8 text-secondary" />
@@ -196,7 +196,7 @@ export default function SalonView({
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="hand-drawn-border bg-white dark:bg-zinc-900 p-6 rounded-2xl space-y-6"
+              className="hand-drawn-border bg-surface dark:bg-zinc-900 p-6 rounded-2xl space-y-6"
             >
               <div className="text-center space-y-2">
                 <h2 className="font-headline-md text-lg sm:text-xl text-primary dark:text-primary-fixed-dim flex items-center justify-center gap-2">

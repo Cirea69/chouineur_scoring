@@ -123,8 +123,14 @@ export default function TopAppBar({
   };
 
   return (
-    <header className="w-full top-0 border-b-2 border-tertiary-container dark:border-surface-variant bg-background/95 dark:bg-surface-container-low/95 backdrop-blur-xs sticky z-40 transition-colors">
-      <div className="flex justify-between items-center px-margin-mobile py-2 w-full max-w-7xl mx-auto">
+    <header className="w-full top-0 border-b-2 border-on-background/10 dark:border-surface-variant bg-background/95 dark:bg-surface-container-low/95 backdrop-blur-xs sticky z-40 transition-colors shadow-sm">
+      {/* Small beautiful retro striped bar mimicking Velonimo & GAP box art */}
+      <div className="h-1.5 w-full flex">
+        <div className="w-1/3 h-full bg-[#e14e2c]" />
+        <div className="w-1/3 h-full bg-[#f5a623]" />
+        <div className="w-1/3 h-full bg-[#1f8373]" />
+      </div>
+      <div className="flex justify-between items-center px-margin-mobile py-2.5 w-full max-w-7xl mx-auto">
         {/* Left Option */}
         <div className="flex items-center gap-2">
           <div className="p-2 text-primary dark:text-primary-fixed-dim bg-black/5 dark:bg-white/5 rounded-full flex items-center justify-center">

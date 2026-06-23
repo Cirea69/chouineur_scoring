@@ -1,42 +1,42 @@
 @import "tailwindcss";
 
 :root {
-  --primary: #733981;
-  --secondary: #b81b3c;
-  --tertiary: #694c00;
+  --primary: #e14e2c;
+  --secondary: #1f8373;
+  --tertiary: #f5a623;
 
-  --primary-container: #ffd6ff;
-  --secondary-container: #ffd9dc;
-  --tertiary-container: #ffe07d;
+  --primary-container: #ffe8e2;
+  --secondary-container: #d6f2ee;
+  --tertiary-container: #fff2ce;
 
   --on-primary: #ffffff;
   --on-secondary: #ffffff;
-  --on-tertiary: #ffffff;
-  --on-primary-container: #2a003a;
-  --on-secondary-container: #40000f;
-  --on-tertiary-container: #241a00;
+  --on-tertiary: #1a1100;
+  --on-primary-container: #531302;
+  --on-secondary-container: #04322b;
+  --on-tertiary-container: #4b3100;
 
-  --background: #fcf9f0;
-  --on-background: #1c1a1f;
+  --background: #ebdcb9;
+  --on-background: #252321;
 
-  --surface: #faf6ef;
-  --surface-dim: #f3edd3;
-  --surface-container-lowest: #ffffff;
-  --surface-container-low: #f8f3e8;
-  --surface-container: #ede7db;
-  --surface-container-high: #e2dbcd;
-  --surface-container-highest: #d7cebf;
+  --surface: #f7eed6;
+  --surface-dim: #ebdcb9;
+  --surface-container-lowest: #faf5e6;
+  --surface-container-low: #f3ebd9;
+  --surface-container: #ebdcb9;
+  --surface-container-high: #decda3;
+  --surface-container-highest: #cfbd93;
 
-  --on-surface: #26211a;
-  --on-surface-variant: #5c5446;
-  --outline: #8c8270;
-  --outline-variant: #cdc4b3;
+  --on-surface: #2b2723;
+  --on-surface-variant: #6b5e52;
+  --outline: #8d7a66;
+  --outline-variant: #dfd2bc;
 
-  --primary-fixed-dim: #733981;
-  --secondary-fixed-dim: #b81b3c;
-  --tertiary-fixed-dim: #694c00;
-  --tertiary-fixed: #ffd54f;
-  --on-tertiary-fixed: #433200;
+  --primary-fixed-dim: #e14e2c;
+  --secondary-fixed-dim: #1f8373;
+  --tertiary-fixed-dim: #f5a623;
+  --tertiary-fixed: #f5a623;
+  --on-tertiary-fixed: #1a1100;
 }
 
 .dark, .dark-mode-state {
@@ -239,14 +239,29 @@ body {
 }
 
 .chouineur-active {
-  background-color: #fabd2d !important;
-  color: #261900 !important;
+  background-color: var(--tertiary) !important;
+  color: var(--on-tertiary) !important;
   transform: scale(1.05) rotate(2deg);
 }
 
 .dark-mode-state .chouineur-active {
   background-color: #ffdb3c !important;
   color: #221b00 !important;
+}
+
+.bg-polka-dots {
+  background-image: radial-gradient(#e14e2c 2px, transparent 2.5px);
+  background-size: 10px 10px;
+}
+
+.bg-jersey-stripes {
+  background: repeating-linear-gradient(
+    45deg,
+    #1f8373,
+    #1f8373 10px,
+    #166534 10px,
+    #166534 20px
+  );
 }
 
 .rotate-card-1 { transform: rotate(-1.2deg); }

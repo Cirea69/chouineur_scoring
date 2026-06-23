@@ -319,7 +319,7 @@ export default function PartieView({
                     onResetGame();
                   }
                 }}
-                className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase text-red-600 hover:text-red-700 bg-red-100 hover:bg-red-200 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-950/70 border border-red-500/10 px-2 py-1 rounded transition-all cursor-pointer hover:scale-[1.03] active:scale-95"
+                className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase text-white hover:bg-red-700 bg-red-600 dark:bg-red-950/80 dark:text-red-400 dark:hover:bg-red-950/100 border border-red-500/20 px-2 py-1.5 rounded transition-all cursor-pointer hover:scale-[1.03] active:scale-95 shadow-sm"
                 title="Démarrer une nouvelle partie (Conserver les joueurs)"
               >
                 Recommencer à zéro 🔄

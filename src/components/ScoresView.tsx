@@ -134,8 +134,8 @@ export default function ScoresView({
         <div className="space-y-12">
           {/* Header Banner */}
           <section className="text-center space-y-4">
-            <div className="inline-block px-6 py-2 bg-secondary-container text-on-secondary rounded-full transform -rotate-1 mb-2 shadow-md">
-              <span className="font-label-lg text-xs tracking-widest font-bold text-white uppercase">
+            <div className="inline-block px-6 py-2 bg-secondary-container rounded-full transform -rotate-1 mb-2 shadow-md">
+              <span className="font-label-lg text-xs tracking-widest font-bold text-on-secondary-container uppercase">
                 Fin de la Partie
               </span>
             </div>
@@ -198,7 +198,7 @@ export default function ScoresView({
                   </div>
                   <div className="w-full bg-primary text-on-primary h-32 rounded-t-2xl flex flex-col items-center justify-center border-2 border-primary-container px-1 shadow-2xl text-center">
                     <span className="font-headline-md text-2xl">1</span>
-                    <h3 className="font-label-lg text-[10px] text-white/80 uppercase tracking-tighter">
+                    <h3 className="font-label-lg text-[10px] text-on-primary/80 uppercase tracking-tighter">
                       Maître Chouineur
                     </h3>
                     <p className="font-headline-sm text-sm sm:text-base mt-0.5 truncate max-w-full font-bold flex items-center justify-center gap-1.5 px-1">
@@ -362,7 +362,7 @@ export default function ScoresView({
           </section>
 
           {/* Note aux perdants */}
-          <section className="bg-white/40 dark:bg-white/5 p-6 hand-drawn-border transform -rotate-0.5 relative overflow-hidden rounded-lg">
+          <section className="bg-surface/40 dark:bg-white/5 p-6 hand-drawn-border transform -rotate-0.5 relative overflow-hidden rounded-lg">
             <div className="absolute -right-4 -bottom-4 opacity-5 pointer-events-none">
               <span className="material-symbols-outlined text-8xl text-secondary">flash_on</span>
             </div>
@@ -432,10 +432,10 @@ export default function ScoresView({
 
               const scoreBgClass =
                 idx === 0
-                  ? "bg-primary text-white"
+                  ? "bg-primary text-on-primary"
                   : idx === 1
-                  ? "bg-secondary text-white"
-                  : "bg-tertiary text-white";
+                  ? "bg-secondary text-on-secondary"
+                  : "bg-tertiary text-on-tertiary";
 
               return (
                 <div
@@ -482,14 +482,13 @@ export default function ScoresView({
                       // Si on a des informations détaillées de la manche
                       if (pariId && plis !== undefined) {
                         const isSuccess = checkPariMatch(pariId, plis) !== null;
-
-                        return (
+                                         return (
                           <div
                             key={mIdx}
-                            className="bg-surface-container/50 dark:bg-stone-900/60 p-2.5 rounded-xl border border-outline-variant flex flex-col justify-between text-left transition-colors font-sans"
+                            className="bg-white dark:bg-stone-900/90 p-2.5 rounded-xl border-2 border-outline-variant/80 flex flex-col justify-between text-left transition-colors font-sans shadow-xs"
                           >
-                            <div className="flex justify-between items-center">
-                              <span className="text-[10px] font-black uppercase text-secondary">Manche {mIdx + 1}</span>
+                            <div className="flex justify-between items-center border-b border-outline-variant/40 pb-1 mb-1">
+                              <span className="text-[10px] font-black uppercase text-[#1f8373] dark:text-secondary-fixed-dim">Manche {mIdx + 1}</span>
                               {matchedCard && (
                                 <span 
                                   className={`h-2.5 w-2.5 rounded-full bg-gradient-to-br ${matchedCard.color}`} 
@@ -497,18 +496,30 @@ export default function ScoresView({
                                 />
                               )}
                             </div>
-                            <div className="mt-1.5 space-y-0.5 text-[10px] font-medium text-on-surface-variant flex-grow">
-                              <div className="font-bold text-on-surface">🎯 {matchedCard?.colorName?.replace("Carte ", "")} : {isSuccess ? "Fait" : "Raté"}</div>
-                              <div>🃏 {plis} {plis > 1 ? "plis" : "pli"}</div>
-                              <div>🔄 Rotation{chouinesFlip > 1 ? "s" : ""} : {chouinesFlip}</div>
-                              <div>🎁 Réserve{chouinesPts > 1 ? "s" : ""} : {chouinesPts} pt{chouinesPts > 1 ? "s" : ""}</div>
+                            <div className="space-y-0.5 text-[10px] font-black text-zinc-900 dark:text-zinc-100 flex-grow">
+                              <div className="font-extrabold flex items-center gap-1">
+                                <span>🎯</span>
+                                <span className="truncate">{matchedCard?.colorName?.replace("Carte ", "")} :</span>
+                                <span className={isSuccess ? "text-green-800 dark:text-green-400" : "text-stone-700 dark:text-stone-400"}>
+                                  {isSuccess ? "Fait" : "Raté"}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1 font-bold text-zinc-800 dark:text-zinc-200">
+                                <span>🃏</span> <span>{plis} {plis > 1 ? "plis" : "pli"}</span>
+                              </div>
+                              <div className="flex items-center gap-1 font-bold text-zinc-800 dark:text-zinc-200">
+                                <span>🔄</span> <span>Rot. : {chouinesFlip}</span>
+                              </div>
+                              <div className="flex items-center gap-1 font-bold text-zinc-800 dark:text-zinc-200">
+                                <span>🎁</span> <span>Rés. : {chouinesPts} pt{chouinesPts > 1 ? "s" : ""}</span>
+                              </div>
                             </div>
                             <div className="mt-2 pt-1.5 border-t border-outline-variant/60 flex justify-between items-center">
-                              <span className="font-extrabold text-[11px] text-primary dark:text-primary-fixed-dim">+{s} pts</span>
+                              <span className="font-black text-[11px] text-primary dark:text-primary-fixed-dim">+{s} pts</span>
                               {isSuccess ? (
-                                <span className="text-[9px] text-green-600 dark:text-green-400 bg-green-500/10 px-1 rounded font-bold uppercaseScale">Succès</span>
+                                <span className="text-[9px] text-green-700 dark:text-green-400 bg-green-500/15 px-1.5 py-0.2 rounded font-extrabold uppercaseScale">Succès</span>
                               ) : (
-                                <span className="text-[9px] text-stone-500 dark:text-stone-400 bg-stone-500/10 px-1 rounded font-bold uppercaseScale">Échec</span>
+                                <span className="text-[9px] text-stone-700 dark:text-stone-400 bg-stone-500/15 px-1.5 py-0.2 rounded font-extrabold uppercaseScale">Échec</span>
                               )}
                             </div>
                           </div>
