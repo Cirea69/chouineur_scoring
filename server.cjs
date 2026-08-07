@@ -156,11 +156,13 @@ app.post("/api/history", (req, res) => {
   if (!newEntry || !newEntry.id) {
     return res.status(400).json({ error: "Donn\xE9es d'historique invalides." });
   }
-  const exists = historyRecs.some((h) => h.id === newEntry.id);
-  if (!exists) {
+  const idx = historyRecs.findIndex((h) => h.id === newEntry.id);
+  if (idx >= 0) {
+    historyRecs[idx] = { ...historyRecs[idx], ...newEntry };
+  } else {
     historyRecs = [newEntry, ...historyRecs];
-    saveDb(rooms, historyRecs);
   }
+  saveDb(rooms, historyRecs);
   res.json({ success: true, history: historyRecs });
 });
 app.delete("/api/history/:id", (req, res) => {
